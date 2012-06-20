@@ -36,17 +36,17 @@ syncIncrementer v1 v2 mon = compile [
     Jmp "loop"
   ]
 
-main1 = initState [("a", IntValue 1), ("b", IntValue 1)] [] (compile [
+main1 = initState Model {mod_vars = [("a", IntValue 1), ("b", IntValue 1)], mod_mons = [], mod_prog = (compile [
   Spawn "a" (incrementer "a"),
   Spawn "b" (incrementer "b")
-  ])
+  ])}
 
-main2 = initState [("a", IntValue 1), ("b", IntValue 1)] ["m"] (compile [
-  Spawn "a" (syncIncrementer "a" "b" "m")
- ,Spawn "b" (syncIncrementer "b" "a" "m")
-  ])
+main2 = initState Model {mod_vars = [("a", IntValue 1), ("b", IntValue 1)], mod_mons = ["m"], mod_prog = (compile [
+  Spawn "a" (syncIncrementer "a" "b" "m"),
+  Spawn "b" (syncIncrementer "b" "a" "m")
+  ])}
 
-deadlock = initState [] ["a","b"] (compile [
+deadlock = initState Model {mod_vars = [], mod_mons = ["a","b"], mod_prog = (compile [
   Spawn "ta" $ compile [
       Label "loop" $ Enter "a",
       Enter "b",
@@ -61,7 +61,7 @@ deadlock = initState [] ["a","b"] (compile [
       Leave "b",
       Jmp "loop"
     ]
-  ])
+  ])}
 
 -- spin in lock/unlock
 petersonThread id myFlag otherFlag victim claim = compile [ Label "loop" $ nop, Block lock, Block unlock, Jmp "loop" ]
@@ -93,14 +93,14 @@ petersonThread id myFlag otherFlag victim claim = compile [ Label "loop" $ nop, 
         Set myFlag
       ]
 
-petersonDriver = initState [("flagA",BoolValue False), 
+petersonDriver = initState Model {mod_vars = [("flagA",BoolValue False), 
                             ("flagB", BoolValue False), 
                             ("victim", IntValue 0), 
                             ("claimA", BoolValue False), 
-                            ("claimB", BoolValue False)] [] $ compile [
+                            ("claimB", BoolValue False)], mod_mons = [], mod_prog = compile [
     Spawn "ta" (petersonThread 1 "flagA" "flagB" "victim" "claimA"),
     Spawn "tb" (petersonThread 1 "flagB" "flagA" "victim" "claimB")
-  ]
+  ]}
 
 {- 
 

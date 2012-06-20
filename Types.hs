@@ -32,6 +32,13 @@ data Prog = Prog
   { 
     prog_insns :: [Insn] 
   }
+  
+data Model = Model
+  {    
+    mod_vars :: [(String,Value)],
+    mod_mons :: [String],
+    mod_prog :: Prog
+  }
 
 data ProcState = Running
   { 
@@ -68,8 +75,8 @@ instance Eq ProgramState where
 instance Ord ProgramState where
   compare a b = compare (stateSig a) (stateSig b)
 
-initState :: [(String,Value)] -> [String] -> Prog -> ProgramState
-initState vars mons entryPoint = ProgramState {
+initState :: Model -> ProgramState
+initState Model {mod_vars = vars, mod_mons = mons, mod_prog = entryPoint} = ProgramState {
     st_procs = M.fromList [(Pid 0, ("entry", Running {proc_prog = entryPoint, proc_ip = 0, proc_stack = [], proc_waitedMon = Nothing}))],
     st_vars  = M.fromList vars,
     st_mons  = M.fromList [(m, MonFree) | m <- mons]
