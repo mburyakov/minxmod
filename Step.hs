@@ -32,10 +32,11 @@ stepInsn (pid, Jmp lab) = do
   stepJmp lab pid
 stepInsn (pid, JmpCond lab) = do
   v <- stepPop pid
-  case v of
-    BoolValue True -> stepJmp lab pid
-    BoolValue False -> stepNext pid
-    _ -> fail $ "Non-boolean in JmpCond: "++show v
+  if v == Value (BoolValue True)
+    then stepJmp lab pid
+    else if v == Value (BoolValue False)
+      then stepNext pid
+      else fail $ "Non-boolean in JmpCond: "++show v
 stepInsn (pid, Get s) = do
   v <- getVar s
   stepPush v pid
@@ -58,7 +59,7 @@ stepInsn (pid, Enter m) = do
       setWaitedMon m pid
 stepInsn (pid, TryEnter m) = do
   f <- tryEnterMon pid m
-  stepPush (BoolValue f) pid
+  stepPush (Value (BoolValue f)) pid
   stepNext pid
 stepInsn (pid, Leave m) = do
   s <- getMonStateM m
@@ -73,14 +74,15 @@ stepInsn (pid, Leave m) = do
         else fail "Mon left by non-owner"
 stepInsn (pid, Spawn name p) = do
   pid' <- stepSpawn name p
-  stepPush (PidValue pid') pid
+  stepPush (Value (PidValue pid')) pid
   stepNext pid
 stepInsn (pid, Assert s) = do
   b <- stepPop pid
-  case b of
-    BoolValue True -> stepNext pid
-    BoolValue False -> fail $ "Assertion failed: "++s
-    _ -> fail $ "Non-boolean in assert: "++show b
+  if b == Value (BoolValue True)
+    then stepNext pid
+    else if b == Value (BoolValue False)
+      then fail $ "Assertion failed: "++s
+      else fail $ "Non-boolean in assert: "++show b
 
 getState :: StepM ProgramState
 getState = StepM $ \st -> [(st,st)]

@@ -1,6 +1,12 @@
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+
 module Types where
 
 import qualified Data.Map as M
+import Data.Bits
+import Data.Typeable
+import Data.Boolean
 
 data Insn =
     Label String Insn
@@ -15,13 +21,43 @@ data Insn =
   | Leave String
   | Spawn String Prog
   | Assert String
+  
+class (Show a, Typeable a) => Value_ a where
+  valLength   :: a -> Int    -- independent of argument
+  valToBinary :: a -> [Bool] -- TODO: wanted: length $ valToBinary x == valLength x (for all x) 
+  valLength x = length $ valToBinary x
+  
+data Value = forall a. Value_ a => Value a
 
-data Value = IntValue Int | BoolValue Bool | PidValue Pid deriving (Ord, Eq)
+instance Show (Value) where
+  show (Value x) = show x
+instance Eq (Value) where
+  (Value x) == (Value y) = (typeOf x == typeOf y) && (valToBinary x == valToBinary y)
+instance Ord (Value) where
+  compare (Value x) (Value y) = case typeCmp of
+      EQ -> valCmp
+      _  -> typeCmp
+    where
+      typeCmp = compare (typeOf x)   (typeOf y)
+      valCmp = compare (valToBinary x) (valToBinary y)
+      
+data EnumValue a = EnumValue a deriving (Show, Typeable)
+instance (Show a, Bits a, Typeable a) => Value_ (EnumValue a) where
+  valLength   (EnumValue x) = bitSize x
+  valToBinary v@(EnumValue x) = map (testBit x) [0..(valLength v)]
 
-instance Show Value where
-  show (IntValue i) = show i
-  show (BoolValue b) = show b
-  show (PidValue p) = show p
+data BoolValue = BoolValue Bool deriving (Show, Typeable)
+instance Value_ BoolValue where
+  valLength _ = 1
+  valToBinary (BoolValue x) = [x]
+
+--TODO: do not push PidValue when spawning
+data PidValue  = PidValue Pid deriving (Show, Typeable)
+instance Value_ PidValue where
+  valLength _ = error "I'm a PidValue - your memory leak!"
+  valToBinary _ = error "I'm a PidValue - do not disturb me!"
+  
+--There is no IntValue because of unknown length (Int8, Int16, ...)
 
 data Pid = Pid Int deriving (Eq, Ord)
 
