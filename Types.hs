@@ -3,6 +3,7 @@ module Types where
 import qualified Data.Map as M
 import Data.Bits
 import Data.Int
+import Data.Word
 
 data Insn =
     Label String Insn
@@ -18,93 +19,103 @@ data Insn =
   | Spawn String Prog
   | Assert String
 
---All integer value are unsigned (machine-representation).
---Signed values are simulated with labels
 data Value =
     BoolValue Bool 
-  | IntValue Int8           --TODO:unsigned
-  | SmallIntValue {valSize ::Int,   siValue::Int32,   valLabel::String} --TODO:unsigned
-  | BigIntValue   {valSize ::Int,   biValue::Integer, valLabel::String} --TODO:unsigned
-  | EnumValue     {valSpace::Int32, enValue::Int32 } --TODO:unsigned
-  | BitSetValue   {                 bsValue::[Bool] }
+  | IntValue Int8
+  | SmallBoundedValue {smallFrom::Int32, smallTo::Int32, sbValue::Int32   }
+  | BigBoundedValue   {bigFrom::Integer, bigTo::Integer, bbValue::Integer }
+  | BitSetValue       {                                  bsValue::[Bool]  }
   | PidValue Pid deriving (Ord, Eq)
 
 instance Show Value where
   show (BoolValue b) = show b
   show (IntValue i) = show i
-  show (SmallIntValue _ i label) = show i ++ "/" ++ label ++ "/"
-  show (BigIntValue _ i label) = show i ++ "/" ++ label ++ "/"	
+  show (SmallBoundedValue from to i) = show i ++ " ∈ [" ++ show from ++ ".." ++ show to ++ "]"
+  show (BigBoundedValue   from to i) = show i ++ " ∈ [" ++ show from ++ ".." ++ show to ++ "]"
   show (BitSetValue l) = "[" ++ map (\b -> if b then '1' else '0') l ++ "]"
   show (PidValue p) = show p
 
-{-fullCheckValue v = 
-  checkValue v && checkValType t && checkValBinary v b
+fullCheckValue v = 
+  ifChValThenChType
     where
-      t = valueType v
-      b = vatToBinary v
--}
+      ifChValThenChType = if chVal then chType else True
+      chVal  = checkValue v
+      chType = checkValType t
+      t = valType v
+      --b = vatToBinary v
+
+
 -- is value acceptable?
 checkValue :: Value -> Bool
 checkValue (BoolValue _) = True
 checkValue (IntValue _)  = True
-checkValue (SmallIntValue s v _) = (intBinSize v) <= s
-checkValue (BigIntValue   s v _) = (intBinSize v) <= s
-checkValue (EnumValue     sp v) = v < sp
-checkValue (BitSetValue l) = (length l)<=32
+checkValue (SmallBoundedValue from to v) = v>=from && v<=to
+checkValue (BigBoundedValue   from to v) = v>=from && v<=to
+checkValue (BitSetValue l) = (length l)<=2^29
 checkValue (PidValue _) = False
 
 data ValueType =
     BoolType
   | IntType
-  | SmallIntType Int --TODO:unsigned
-  | BigIntType Int --TODO:unsigned
-  | EnumType Int32 --TODO:unsigned
-  | BitSetType Int --TODO:unsigned
+  | SmallBoundedType Int32   Int32
+  | BigBoundedType   Integer Integer
+  | BitSetType Int
   | PidType
 
 valType :: Value -> ValueType
 valType (BoolValue        _) = BoolType
 valType (IntValue         _) = IntType
-valType (SmallIntValue s  _ lab) = SmallIntType s
-valType (BigIntValue   s  _ lab) = BigIntType s
-valType (EnumValue     sp _) = EnumType sp
+valType (SmallBoundedValue from to _) = SmallBoundedType from to
+valType (BigBoundedValue   from to _) = BigBoundedType   from to
 valType (BitSetValue      l) = BitSetType $ length l
 valType (PidValue         _) = PidType
 
--- is type acceptable?
+-- is type populated (exists acceptable value of this type)?
 checkValType :: ValueType -> Bool
 checkValType BoolType = True
-checkValType IntType = True
-checkValType (SmallIntType s) = s <= 32
-checkValType (BigIntType s) = True
-checkValType (EnumType sp) = sp>0
-checkValType (BitSetType s) = s<=32
+checkValType IntType  = True
+checkValType (SmallBoundedType _ _) = True
+checkValType (BigBoundedType   from to) = intBinSize (to-from) < 2^29
+checkValType (BitSetType s) = s<=2^29 && s>=0
 checkValType PidType = False
 
-bitsToBinary :: Bits a => a -> [Bool]
-bitsToBinary i =
+bitsToBin :: Bits a => a -> [Bool]
+bitsToBin i =
   map (testBit i) [0..bitSize i-1]
 
-intBinSize :: Bits a => a -> Int
-intBinSize v = 
-  length $ dropWhile not $ reverse $ bitsToBinary v
+--intBinSize :: Bits a => a -> Int
+--intBinSize v = 
+--  length $ dropWhile not $ reverse $ bitsToBinary v
 
+intToBin :: (Bits a) => Int -> a -> [Bool]
+intToBin n i =
+  map (testBit i) [0..n-1]
+
+intBinSize :: Integral a => a -> Int
+intBinSize 0 = 0
+intBinSize 1 = 1
+intBinSize x | x<0 = undefined
+intBinSize x =
+  1 + intBinSize (x `div` 2)
+  
+  
 binSize :: ValueType -> Int
 binSize BoolType = 1
 binSize IntType = 8
-binSize (SmallIntType s) = s
-binSize (BigIntType s) = s
-binSize (EnumType sp) = intBinSize (sp-1)
+binSize (SmallBoundedType from to) = intBinSize (to-from)
+binSize (BigBoundedType from to) = intBinSize (to-from)
 binSize (BitSetType s) = s
 binSize PidType = error "binSize PidType"
 
-valToBinary :: Value -> [Bool]
-valToBinary (BoolValue b) = [b]
-valToBinary (IntValue i) = bitsToBinary i
-valToBinary (SmallIntValue s i label) = take s (bitsToBinary i)
---valToBinary (BigIntValue s i label) = 
---valToBinary (BitSetValue l) = 
---valToBinary (PidValue p) = 
+valToBin :: Value -> [Bool]
+valToBin (BoolValue b) = [b]
+valToBin (IntValue i) = bitsToBin i
+valToBin (SmallBoundedValue from to i) = intToBin (intBinSize (to-from)) (i-from)
+valToBin (BigBoundedValue   from to i) = intToBin (intBinSize (to-from)) (i-from)
+valToBin (BitSetValue l) = l
+valToBin (PidValue p) = error "valToBinary PidType"
+
+--binToVal :: [Bool] -> ValueType -> Value
 
 data Pid = Pid Int deriving (Eq, Ord)
 
