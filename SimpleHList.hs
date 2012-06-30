@@ -2,6 +2,8 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+--{-# LANGUAGE TypeSynonymInstances#-}
 
 module SimpleHList where
 
@@ -38,12 +40,15 @@ hHead (HCons elem tail) = elem
 hTail :: HList l => HCons e l -> l
 hTail (HCons elem tail) = tail
 
--- | hReverse
+{-- | hReverse
 
 type family HReverse' l r :: *
+type family HReverse l  :: *
 
 type instance HReverse' HNil l2 = l2
 type instance HReverse' (HCons e1 l1) l2 = HReverse' l1 (HCons e1 l2)
+
+type instance HReverse l = HReverse' l HNil
 
 class HReversable a b where
   hReverse' :: a -> b -> HReverse' a b
@@ -51,12 +56,149 @@ class HReversable a b where
 instance (HReversable HNil l2) where
   hReverse' HNil list2 = list2
 
-instance (HReversable l1 (HCons e1 l2)) => (HReversable (HCons e1 l1) l2)	 where
+instance (HReversable l1 (HCons e1 l2)) => (HReversable (HCons e1 l1) l2) where
   hReverse' (HCons elem tail) accum =
     hReverse' tail (HCons elem accum)
 
 hReverse list =
   hReverse' list HNil
+--}
+-- | hMap
+
+type family HMap' f l :: *
+
+type instance HMap' HNil HNil = HNil
+type instance HMap' (HCons (a->b) lf) (HCons a ll) = HCons b (HMap' lf ll)
+
+class HMapable a b where
+  hMap' :: a -> b -> HMap' a b
+  
+instance (HMapable HNil HNil) where
+  hMap' HNil HNil = HNil
+
+instance (HMapable l1 l2) => (HMapable (HCons (e1->e2) l1) (HCons e1 l2)) where
+  hMap' (HCons fun ftail) (HCons arg atail) = 
+    HCons (fun arg) $ hMap' ftail atail
+
+-- | hLength
+
+class HLengthable a where
+  hLength :: a -> Int
+  
+instance HLengthable HNil where
+  hLength HNil = 0
+  
+instance HLengthable l => HLengthable (HCons e l) where
+  hLength (HCons elem list) = 1 + hLength list
+
+type family HLength' l :: *
+
+type instance HLength' HNil = HNil
+type instance HLength' (HCons e l) = HCons () (HLength' l)
+
+class HLengthable' a where
+  hLength' :: a -> HLength' a
+  
+instance HLengthable' HNil where
+  hLength' HNil = HNil
+  
+instance HLengthable' l => HLengthable' (HCons e l) where
+  hLength' (HCons elem list) = HCons () (hLength' list)
+
+-- | hTake
+
+type family HTake' a b c :: *
+type instance HTake' l1 l2 HNil = l2
+type instance HTake' (HCons e1 l1) l2 (HCons e1 l3) = HTake' l1 (HCons e1 l2) l3
+
+class HTakeable' a b c where
+  hTake' :: a -> b -> c -> HTake' a b c
+
+instance HTakeable' l1 l2 HNil where
+  hTake' left right _ = right
+
+instance (HTakeable' l1 (HCons e1 l2) l4) => HTakeable' (HCons e1 l1) l2 (HCons e1 l4) where
+  hTake' (HCons elem list1) list2 example =
+    hTake' list1 (HCons elem list2) (tmpfun example)
+      where
+        tmpfun :: HCons e l -> l
+        tmpfun _ = undefined
+
+hTakeRev template list =
+  hTake' list HNil (undefined `asTypeOf` hReverse template)
+  
+hTake template list = 
+  hReverse $ hTake' list HNil (undefined `asTypeOf` template)
+
+hReverse list = hTake' list HNil (undefined `asTypeOf` list)
+
+--hTakeRev list =
+--  hTake' list HNil
+
+--hTake list example = 
+--  hReverse (hTake' list HNil example)
+  
+--lst = 
+-- (HCons True $ HCons (1::Int) HNil)
+--tmp = 
+-- hTake lst (undefined :: HCons Bool (HCons Int HNil))
+
+{--
+type family HTake l r a :: *
+type instance HTake l HNil a = HReverse a
+type instance HTake l (HCons e r) (HCons e a) = HTake (HCons e l) r a
+--}
+--class HT l r h a
+--instance HT l r (HTake l r a) a
+--instance HT (HCons el l) r (HCons eh h) a => HT l (HCons el r) h a
+
+{-class HTakeable l r a where
+  hTake :: l -> r -> HTake l r a -> a
+
+instance (HT l r (HTake l r r) r) => HTakeable l r r where
+  hTake left right ex = right
+
+instance (HTakeable l (HCons e r) a) => HTakeable (HCons e l) r a where
+  hTake (HCons elem left) right ex = 
+    hTake left (HCons elem right) (tmpfun ex)
+      where
+        tmpfun :: HCons e_ l_ -> l_
+        tmpfun _ = undefined
+
+instance (HTakeable' l1 (HCons e1 l2) l4) => HTakeable' (HCons e1 l1) l2 (HCons e1 l4) where
+  hTake' (HCons elem list1) list2 example =
+    hTake' list1 (HCons elem list2) (tmpfun example)
+      where
+--        (r, list4) = hTake' list1 (HCons elem list2)
+        tmpfun :: HCons e l -> l
+        tmpfun _ = undefined
+-}
+-- hTake__ :: (HTakeable' a d c) => a -> HTake' a HNil c --(HTake a HNil b)
+{--hTake__ list = t
+  where
+    t = hTake' list HNil (undefined::HTake a HNil b)
+-}
+{-class HTakeable a c where
+  hTake__ :: a -> c
+
+instance HTakeable l1 l2 where
+  hTake__ list = 
+    hTake' list HNil (undefined::HTake l2 HNil)
+
+--instance HTakeable l1 (HCons elem list) where
+  hTakeRev list =
+    hTake' list HNil
+-}
+--hTakeRev :: l1 -> l2 -> l2
+--hTakeRev list example = r
+--  where
+--     (r, _) = (hTake' list HNil) `asTypeOf` (example, hReverse example)
+
+--  hDrop' (HCons elem tail1) tail2 =
+--    HCons elem tail2
+--  hReverse' (HCons elem tail) accum =
+--    hReverse' tail (HCons elem accum)
+
 
 --hReverse :: l1 -> l2  -> HReverse' l1 l2
 --hReverse HNil accum =
