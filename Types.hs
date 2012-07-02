@@ -3,7 +3,7 @@ module Types where
 import qualified Data.Map as M
 import Data.Bits
 import Data.Int
-import Data.Word
+--import Data.Word
 
 data Insn =
     Label String Insn
@@ -25,27 +25,30 @@ data Value =
   | SmallBoundedValue {smallFrom::Int32, smallTo::Int32, sbValue::Int32   }
   | BigBoundedValue   {bigFrom::Integer, bigTo::Integer, bbValue::Integer }
   | BitSetValue       {                                  bsValue::[Bool]  }
-  | PidValue Pid deriving (Ord, Eq)
+  | PidValue Pid
+  | ErrorValue String deriving (Ord, Eq)
 
 instance Show Value where
   show (BoolValue b) = show b
   show (IntValue i) = show i
-  show (SmallBoundedValue from to i) = show i ++ " ∈ [" ++ show from ++ ".." ++ show to ++ "]"
-  show (BigBoundedValue   from to i) = show i ++ " ∈ [" ++ show from ++ ".." ++ show to ++ "]"
+  show (SmallBoundedValue from to i) = show i ++ " in [" ++ show from ++ ".." ++ show to ++ "]"
+  show (BigBoundedValue   from to i) = show i ++ " in [" ++ show from ++ ".." ++ show to ++ "]"
   show (BitSetValue l) = "[" ++ map (\b -> if b then '1' else '0') l ++ "]"
   show (PidValue p) = show p
+  show (ErrorValue s) = "!!error " ++ show s ++ "!!"
 
 fullCheckValue v = 
-  ifChValThenChType
+  bv == v
     where
       ifChValThenChType = if chVal then chType else True
       chVal  = checkValue v
       chType = checkValType t
       t = valType v
-      --b = vatToBinary v
+      b = valToBin v
+      bv = binToVal t b
 
 
--- is value acceptable?
+-- is value valid?
 checkValue :: Value -> Bool
 checkValue (BoolValue _) = True
 checkValue (IntValue _)  = True
@@ -53,6 +56,7 @@ checkValue (SmallBoundedValue from to v) = v>=from && v<=to
 checkValue (BigBoundedValue   from to v) = v>=from && v<=to
 checkValue (BitSetValue l) = (length l)<=2^29
 checkValue (PidValue _) = False
+checkValue (ErrorValue _) = True
 
 data ValueType =
     BoolType
@@ -61,7 +65,10 @@ data ValueType =
   | BigBoundedType   Integer Integer
   | BitSetType Int
   | PidType
+  | ErrorType String
 
+-- value should be valid
+-- return: valid type
 valType :: Value -> ValueType
 valType (BoolValue        _) = BoolType
 valType (IntValue         _) = IntType
@@ -69,8 +76,9 @@ valType (SmallBoundedValue from to _) = SmallBoundedType from to
 valType (BigBoundedValue   from to _) = BigBoundedType   from to
 valType (BitSetValue      l) = BitSetType $ length l
 valType (PidValue         _) = PidType
+valType (ErrorValue       s) = ErrorType s
 
--- is type populated (exists acceptable value of this type)?
+-- is type valid (populated) (exists acceptable value of this type)?
 checkValType :: ValueType -> Bool
 checkValType BoolType = True
 checkValType IntType  = True
@@ -78,27 +86,34 @@ checkValType (SmallBoundedType _ _) = True
 checkValType (BigBoundedType   from to) = intBinSize (to-from) < 2^29
 checkValType (BitSetType s) = s<=2^29 && s>=0
 checkValType PidType = False
+checkValType (ErrorType _) = True
 
 bitsToBin :: Bits a => a -> [Bool]
 bitsToBin i =
-  map (testBit i) [0..bitSize i-1]
-
---intBinSize :: Bits a => a -> Int
---intBinSize v = 
---  length $ dropWhile not $ reverse $ bitsToBinary v
+  intToBin (bitSize i) i
 
 intToBin :: (Bits a) => Int -> a -> [Bool]
-intToBin n i =
-  map (testBit i) [0..n-1]
+intToBin length i =
+  map (testBit i) [0..length-1]
+
+binToInt :: Integral a => [Bool] -> a
+binToInt [] = 0
+binToInt (h:t) =
+  2*(binToInt t) + if h then 1 else 0
 
 intBinSize :: Integral a => a -> Int
 intBinSize 0 = 0
 intBinSize 1 = 1
-intBinSize x | x<0 = undefined
-intBinSize x =
+intBinSize x | x>1 =
   1 + intBinSize (x `div` 2)
-  
-  
+
+boundInt :: Integral a => a -> a -> a -> a
+boundInt from to v =
+  from + (v-from) `mod` 2^len
+    where
+      len = intBinSize (to-from)
+
+-- type should be valid
 binSize :: ValueType -> Int
 binSize BoolType = 1
 binSize IntType = 8
@@ -106,16 +121,38 @@ binSize (SmallBoundedType from to) = intBinSize (to-from)
 binSize (BigBoundedType from to) = intBinSize (to-from)
 binSize (BitSetType s) = s
 binSize PidType = error "binSize PidType"
+binSize (ErrorType _) = 0
 
+-- value should be valid
 valToBin :: Value -> [Bool]
 valToBin (BoolValue b) = [b]
 valToBin (IntValue i) = bitsToBin i
-valToBin (SmallBoundedValue from to i) = intToBin (intBinSize (to-from)) (i-from)
-valToBin (BigBoundedValue   from to i) = intToBin (intBinSize (to-from)) (i-from)
+valToBin (SmallBoundedValue from to i) = intToBin (intBinSize (to-from)) i
+valToBin (BigBoundedValue   from to i) = intToBin (intBinSize (to-from)) i
 valToBin (BitSetValue l) = l
-valToBin (PidValue p) = error "valToBinary PidType"
+valToBin (PidValue p) = error "valToBin PidType"
+valToBin (ErrorValue s) = []
 
---binToVal :: [Bool] -> ValueType -> Value
+-- length should be correct
+-- return: value can be invalid
+binToVal :: ValueType -> [Bool] -> Value
+binToVal BoolType [bool] = BoolValue bool
+binToVal IntType b = IntValue $ binToInt b
+binToVal (SmallBoundedType from to) b = SmallBoundedValue from to $ boundInt from to $ binToInt b
+binToVal (BigBoundedType   from to) b = BigBoundedValue   from to $ boundInt from to $ binToInt b
+binToVal (BitSetType _) b = BitSetValue b
+binToVal PidType b = error "binToVal PidType"
+binToVal (ErrorType s) [] = ErrorValue s
+
+data Arithmetic = Arithmetic {
+  -- input top of stack, output top of stack (list for overloaded functions)
+  arithSignature :: [([ValueType], [ValueType])],
+  -- apply the function to the top of stack (shouldn't modify bottom)
+  -- input should have valid type
+  arithFunc :: [Value] -> [Value],
+  -- predicate :: InputSignature -> Input++Output -> Bool
+  predicate :: [ValueType] -> [Bool] -> Bool
+}
 
 data Pid = Pid Int deriving (Eq, Ord)
 
