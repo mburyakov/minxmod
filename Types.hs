@@ -4,6 +4,7 @@ import qualified Data.Map as M
 import Data.Bits
 import Data.Int
 --import Data.Word
+import Predicates
 
 data Insn =
     Label String Insn
@@ -12,7 +13,7 @@ data Insn =
   | JmpCond String
   | Get String
   | Set String
-  | Arith ([Value] -> [[Value]])
+  | Arith Arithmetic
   | Enter String
   | TryEnter String
   | Leave String
@@ -96,6 +97,9 @@ intToBin :: (Bits a) => Int -> a -> [Bool]
 intToBin length i =
   map (testBit i) [0..length-1]
 
+intToHisBin n = 
+  intToBin (intBinSize n) n
+
 binToInt :: Integral a => [Bool] -> a
 binToInt [] = 0
 binToInt (h:t) =
@@ -106,6 +110,9 @@ intBinSize 0 = 0
 intBinSize 1 = 1
 intBinSize x | x>1 =
   1 + intBinSize (x `div` 2)
+
+checkIntBinBijection n =
+  n == (binToInt $ intToHisBin n)
 
 boundInt :: Integral a => a -> a -> a -> a
 boundInt from to v =
@@ -145,13 +152,13 @@ binToVal PidType b = error "binToVal PidType"
 binToVal (ErrorType s) [] = ErrorValue s
 
 data Arithmetic = Arithmetic {
-  -- input top of stack, output top of stack (list for overloaded functions)
-  arithSignature :: [([ValueType], [ValueType])],
+  -- input top of stack, output top of stack
+  arithSignature :: ([ValueType], [ValueType]),
   -- apply the function to the top of stack (shouldn't modify bottom)
   -- input should have valid type
-  arithFunc :: [Value] -> [Value],
-  -- predicate :: InputSignature -> Input++Output -> Bool
-  predicate :: [ValueType] -> [Bool] -> Bool
+  arithFunc :: [Value] -> [[Value]],
+  -- arithPredicate :: Predicate on [beforeTop, afterTop]
+  arithPredicate :: Predicate
 }
 
 data Pid = Pid Int deriving (Eq, Ord)

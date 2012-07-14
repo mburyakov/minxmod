@@ -2,13 +2,16 @@ module Main where
 
 import Types
 import ToDot
+import StateGraph
 
-nop = Arith $ \s -> [s]
-pushI i = Arith $ \s -> [IntValue i:s]
-pushB b = Arith $ \s -> [BoolValue b:s]
-unopI op = Arith $ \(IntValue a:s) -> [IntValue (op a):s]
-unopB op = Arith $ \(BoolValue a:s) -> [BoolValue (op a):s]
-cmp op = Arith $ \(IntValue b:IntValue a:s) -> [BoolValue (op a b):s]
+arith = \f -> Arith (Arithmetic undefined f undefined)
+
+nop = arith $ \s -> [s]
+pushI i = arith $ \s -> [IntValue i:s]
+pushB b = arith $ \s -> [BoolValue b:s]
+unopI op = arith $ \(IntValue a:s) -> [IntValue (op a):s]
+unopB op = arith $ \(BoolValue a:s) -> [BoolValue (op a):s]
+cmp op = arith $ \(IntValue b:IntValue a:s) -> [BoolValue (op a b):s]
 
 -- while(true) v++
 incrementer v = compile [
@@ -112,4 +115,4 @@ petersonDriver = initState Model {mod_vars = [("flagA",BoolValue False),
 []
 *Main>
 
--}  
+-}

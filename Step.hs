@@ -46,7 +46,7 @@ stepInsn (pid, Set s) = do
   stepNext pid
 stepInsn (pid, Arith op) = do
   stk <- getStack pid
-  let stks' = op stk
+  let stks' = arithFunc op stk
   nondet [setStack s' pid >> stepNext pid | s' <- stks']
 stepInsn (pid, Enter m) = do
   b <- tryEnterMon pid m
