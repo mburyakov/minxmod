@@ -4,67 +4,116 @@ import Types
 import Predicates
 import Data.Boolean
 
-predEq 0 m =
-  PredNeg (PredAny m)
-predEq n 0 =
-  PredNeg (PredAny n)
-predEq n m =
-  PredIf
-    (PredEquiv (PredArg 0) (PredArg n))
-    (PredPerm (PermPerm $ filter (/=n) [1..n+m-1]) (predEq (n-1) (m-1)))
-    PredFalse
-  
-    
-    
-predInc n 0 =
-  PredFalse
-predInc 0 m =
-  PredAnd (PredArg 0) (PredPerm (PermShift 1) (PredNeg (PredAny m)))
-predInc n m =
-  PredIf
-    (PredEquiv (PredArg 0) (PredArg n))
-    PredFalse
-    (PredIf
-      (PredArg 0)
-        (PredPerm (PermPerm $ filter (/=n) [1..n+m-1]) (predInc (n-1) (m-1)))
-        (PredPerm (PermPerm $ filter (/=n) [1..n+m-1]) (predEq (n-1) (m-1))))
+withPerm perm pred = PredPerm (PermPerm perm) pred
 
-        
-        
+withBefore = withFirst
+withAfter  = withSecond
+
+withFirst  = withPerm $ ArgArg [0,0]
+withSecond = withPerm $ ArgArg [1,0]
+
+predEq 0 m =
+  withAfter  $ notB (PredAny m)
+predEq n 0 =
+  withBefore $ notB (PredAny n)
+predEq n m =
+  ifB
+    ((PredArg [0,0]) ==* (PredArg [1,0]))
+    (PredPerm (PermPerm $ ArgList [ArgArg [0,1], ArgArg [1,1]]) $ predEq (n-1) (m-1))
+    false
+
+
+predInc n 0 =
+  false
+predInc 0 m =
+  withAfter $ (PredArg [0]) &&* (PredPerm (PermPerm $ ArgArg [1]) (notB (PredAny m)))
+predInc n m =
+  ifB
+    ((PredArg [0,0]) ==* (PredArg [1,0]))
+    false
+    (ifB
+      (PredArg [0,0])
+      (PredPerm (PermPerm $ ArgList [ArgArg [0,1], ArgArg [1,1]]) $ predInc (n-1) (m-1))
+      (PredPerm (PermPerm $ ArgList [ArgArg [0,1], ArgArg [1,1]]) $ predEq (n-1) (m-1)))
+
+
 predAdd 0 n2 na =
-  predEq n2 na
+  withPerm (ArgList [ArgArg [0,0,0], ArgArg [1,0,0]]) (predEq n2 na)
 
 predAdd n1 0 na =
-  predEq n1 na
+  withPerm (ArgList [ArgArg [0,1,0], ArgArg [1,0,0]]) (predEq n1 na)
   
 predAdd n1 n2 0 =
-  PredNeg (PredAny (n1+n2))
-  
-predAdd n1 n2 na =
-  PredIf
-    (PredXor (PredXor (PredArg 0) (PredArg n1)) (PredArg (n1+n2)))
-    PredFalse
-    (PredIf
-      (PredAnd (PredArg 0) (PredArg n1))
-        (PredPerm (PermPerm $ filter ((/=n1)&&*(/=n1+n2)) [1..n1+n2+na-1]) (predIncAdd (n1-1) (n2-1) (na-1)))
-        (PredPerm (PermPerm $ filter ((/=n1)&&*(/=n1+n2)) [1..n1+n2+na-1]) (predAdd (n1-1) (n2-1) (na-1))))
+      (withFirst.withBefore  $ notB (PredAny n1))
+  &&* (withSecond.withBefore $ notB (PredAny n2))
 
-        
-        
+predAdd n1 n2 na =
+  ifB
+    (((PredArg [0,0,0]) /=* (PredArg [0,1,0])) /=* (PredArg [1,0,0]))
+    false
+    (ifB
+      ((PredArg [0,0,0]) &&* (PredArg [0,1,0]))
+      (PredPerm (PermPerm $ ArgList [ArgList [ArgArg [0,0,1], ArgArg [0,1,1]], ArgList [ArgArg [1,0,1]]]) (predIncAdd (n1-1) (n2-1) (na-1)))
+      (PredPerm (PermPerm $ ArgList [ArgList [ArgArg [0,0,1], ArgArg [0,1,1]], ArgList [ArgArg [1,0,1]]]) (predAdd (n1-1) (n2-1) (na-1))))
+
+
 predIncAdd 0 n2 na =
-  predInc n2 na
+  withPerm (ArgList [ArgArg [0,0,0], ArgArg [1,0,0]]) (predInc n2 na)
 
 predIncAdd n1 0 na =
-  predInc n1 na
-  
+  withPerm (ArgList [ArgArg [0,1,0], ArgArg [1,0,0]]) (predInc n1 na)
+
 predIncAdd n1 n2 0 =
-  PredFalse
+  false
 
 predIncAdd n1 n2 na =
-  PredIf
-    (PredEquiv (PredXor (PredArg 0) (PredArg n1)) (PredArg (n1+n2)))
-    PredFalse
-    (PredIf
-      (PredOr (PredArg 0) (PredArg n1))
-        (PredPerm (PermPerm $ filter ((/=n1)&&*(/=n1+n2)) [1..n1+n2+na-1]) (predIncAdd (n1-1) (n2-1) (na-1)))
-        (PredPerm (PermPerm $ filter ((/=n1)&&*(/=n1+n2)) [1..n1+n2+na-1]) (predAdd (n1-1) (n2-1) (na-1))))
+  ifB
+    (((PredArg [0,0,0]) /=* (PredArg [0,1,0])) ==* (PredArg [1,0,0]))
+    false
+    (ifB
+      ((PredArg [0,0,0]) ||* (PredArg [0,1,0]))
+        (PredPerm (PermPerm $ ArgList [ArgList [ArgArg [0,0,1], ArgArg [0,1,1]], ArgList [ArgArg [1,0,1]]]) (predIncAdd (n1-1) (n2-1) (na-1)))
+        (PredPerm (PermPerm $ ArgList [ArgList [ArgArg [0,0,1], ArgArg [0,1,1]], ArgList [ArgArg [1,0,1]]]) (predAdd (n1-1) (n2-1) (na-1))))
+
+first  (x,y) = x
+second (x,y) = y
+
+byteT = SmallBoundedType (-127) 128
+byteV = SmallBoundedValue (-127) 128
+
+arByteAdd = Arithmetic {
+  arithSignature = ([byteT, byteT], [byteT]),
+  arithFunc = \s -> [byteV (sbValue (s!!0) + sbValue (s!!1)): drop 2 s],
+  arithPredicate = predAdd 8 8 8
+}
+
+inputDepth :: Arithmetic -> Int
+inputDepth = length.first.arithSignature
+
+outputDepth :: Arithmetic -> Int
+outputDepth = length.second.arithSignature
+
+-- predicate on whole input and output stacks
+predArith ar = 
+  pred &&* BDDeq [0,inl] [1,outl] true false
+      where
+        pred = arithPredicate ar
+	inl = inputDepth ar
+	outl = outputDepth ar
+
+
+xorList _ [] = []
+xorList True  (x:xs) = (not x) : xorList x xs
+xorList False (x:xs) = x : xorList x xs
+
+deXorList _ [] = []
+deXorList True  (x:xs) = (not x) : deXorList (not x) xs
+deXorList False (x:xs) = x : deXorList x xs
+
+grayCode n =
+  reverse $ xorList False $ reverse $ intToBin (intBinSize n) n
+
+fromGrayCode l =
+  binToInt $ reverse $ deXorList False $ reverse l
+
+--predLine n (Arith (Arithmetic sign func pred) =
