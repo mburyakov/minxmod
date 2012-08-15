@@ -38,6 +38,11 @@ argDrop [0]    t@(ArgArg arg) = t
 argDrop [i]    (ArgList list) = ArgList $ drop' i list
 argDrop (i:il) (ArgList list) = argDrop il (list !! i)
 
+argSoftDrop ::  ArgIndex -> ArgTree a -> (ArgIndex, ArgTree a)
+argSoftDrop l    t@(ArgArg arg) = (l, t)
+argSoftDrop [i]    (ArgList list) = ([], ArgList $ drop' i list)
+argSoftDrop (i:il) (ArgList list) = argSoftDrop il (list !! i)
+
 argHead (ArgList list) = head list
 
 (!!!) :: ArgTree a -> ArgIndex -> ArgTree a
@@ -48,6 +53,10 @@ tree !!! i = argHead $ argDrop i tree
 tree !!!! i = argArg $ tree !!! i
 
 
+type ArgTemplate = ArgTree ()
+
+argTemplate n = ArgList $ map ArgArg $ replicate n ()
+
 data Predicate =
     PredTrue
   | PredFalse
@@ -55,14 +64,9 @@ data Predicate =
   | PredNeg       (Predicate)
   | PredOr        (Predicate) (Predicate)
   | PredAnd       (Predicate) (Predicate)
---  | PredImpl      (Predicate) (Predicate)
---  | PredEquiv     (Predicate) (Predicate)
---  | PredXor       (Predicate) (Predicate)
---  | PredIf        (Predicate) (Predicate) (Predicate)
   | PredPerm      (Permutation Bool) (Predicate)
   | PredAll   Int
   | PredAny   Int
---  | PredSat [ArgIndex] (Predicate)
   | BDDv ArgIndex (Predicate) (Predicate)
   | BDDeq ArgIndex ArgIndex (Predicate) (Predicate)
   deriving (Show)
@@ -80,21 +84,8 @@ instance EqB Predicate Predicate where
 instance IfB Predicate Predicate where
   ifB c l r = (c &&* l) ||* (notB c &&* r)
 
---predArg = PredArg
---predAll = PredAll
---predAny = PredAny
---predPerm = PredPerm
---predIf c l r =
---  (c &&* l) ||* (notB c &&* r)  
---predEquiv l r =
---  (l &&* r) ||* (notB l &&* notB r)
---predXor :: Predicate -> Predicate -> Predicate
---predXor =
---  notB predEquiv
-
 
 data Permutation a =
---  PermId
     PermComp (Permutation a) (Permutation a)   
   | PermPerm (ArgTree ArgIndex)
   deriving (Show)
@@ -106,10 +97,6 @@ toFunc (PredArg i)     x = x !!!! i
 toFunc (PredNeg a)     x = notB $ toFunc a x
 toFunc (PredOr a b)    x = (toFunc a x) ||* (toFunc b x)
 toFunc (PredAnd a b)   x = (toFunc a x) &&* (toFunc b x)
---toFunc (PredImpl a b)  x = toFunc (PredOr (PredNeg a) b) x
---toFunc (PredEquiv a b) x = toFunc (PredOr (PredAnd a b) (PredAnd (PredNeg a) (PredNeg b))) x
---toFunc (PredXor a b)   x = notB $ toFunc (PredEquiv a b) x
---toFunc (PredIf a b c)  x = if toFunc a x then toFunc b x else toFunc c x
 toFunc (PredPerm p a)  x = toFunc a $ toPerm p x
 toFunc (PredAll n) (ArgList l) = foldl (&&*) true  $ map argArg (take' n l)
 toFunc (PredAny n) (ArgList l) = foldl (||*) false $ map argArg (take' n l)
@@ -118,13 +105,22 @@ toFunc (BDDeq i1 i2 a b) x = if argDrop i1 x == argDrop i2 x then toFunc a x els
 toFunc t1 t2 = error (show t1 ++ show t2)
 
 toPerm :: Permutation a -> ArgTree a -> ArgTree a
---toPerm PermId x        = id x
 toPerm (PermComp p1 p2) x =
   (toPerm p1).(toPerm p2) $ x
 toPerm (PermPerm indices) x =
   case indices of
     (ArgArg  i ) -> argDrop i x
     (ArgList il) -> ArgList [ toPerm (PermPerm i) x | i <- il]
+
+toIndexFunc :: Permutation a -> ArgIndex -> ArgIndex
+toIndexFunc (PermComp p1 p2) x = 
+  (toIndexFunc p2).(toIndexFunc p1) $ x
+toIndexFunc (PermPerm indices) x =
+  reverse rleft ++ [(e1+e2)] ++ rest
+    where
+      (e1:rest, ArgArg left) = argSoftDrop x indices
+      (e2:rleft) = reverse left
+
 
 data ArgOrd = ArgOrd {
   argCompare :: ArgIndex -> ArgIndex -> Ordering
@@ -134,9 +130,63 @@ reducePred :: ArgOrd -> Predicate -> Predicate
 reducePred _ PredTrue = PredTrue
 reducePred _ PredFalse = PredFalse
 reducePred _ (PredArg i) = BDDv i PredTrue PredFalse
-reducePred _ (PredNeg (BDDv i a b)) = BDDv i b a
+reducePred o (PredNeg (BDDv i a b)) = BDDv i (reducePred o (notB a)) (reducePred o (notB b))
+reducePred _ (PredNeg PredTrue)  = PredFalse
+reducePred _ (PredNeg PredFalse) = PredTrue
+reducePred o (PredNeg x) = reducePred o $ PredNeg $ reducePred o x
 reducePred o (PredOr t1@(BDDv i1 a1 b1) t2@(BDDv i2 a2 b2)) =
   case argCompare o i1 i2 of
     EQ -> BDDv i1 (reducePred o (a1||*a2)) (reducePred o (b1||*b2))
     LT -> BDDv i1 (reducePred o (a1||*t2)) (reducePred o (b1||*t2))
     GT -> BDDv i2 (reducePred o (a2||*t1)) (reducePred o (b2||*t1))
+reducePred o (PredOr _ PredTrue) =
+  PredTrue
+reducePred o (PredOr PredTrue _) =
+  PredTrue
+reducePred o (PredOr t1 PredFalse) =
+  reducePred o t1
+reducePred o (PredOr PredFalse t2) =
+  reducePred o t2
+reducePred o (PredOr x y) =
+  reducePred o $ PredOr (reducePred o x) (reducePred o y)
+reducePred o (PredAnd t1@(BDDv i1 a1 b1) t2@(BDDv i2 a2 b2)) =
+  case argCompare o i1 i2 of
+    EQ -> BDDv i1 (reducePred o (a1&&*a2)) (reducePred o (b1&&*b2))
+    LT -> BDDv i1 (reducePred o (a1&&*t2)) (reducePred o (b1&&*t2))
+    GT -> BDDv i2 (reducePred o (a2&&*t1)) (reducePred o (b2&&*t1))
+reducePred o (PredAnd _ PredFalse) =
+  PredFalse
+reducePred o (PredAnd PredFalse _) =
+  PredFalse
+reducePred o (PredAnd t1 PredTrue) =
+  reducePred o t1
+reducePred o (PredAnd PredTrue t2) =
+  reducePred o t2
+reducePred o (PredAnd x y) =
+  reducePred o $ PredAnd (reducePred o x) (reducePred o y)
+reducePred o (PredAny n) =
+  reducePred' PredTrue o (PredAny n)
+    where
+      reducePred' _ _ (PredAny 0) =
+        PredFalse
+      reducePred' prTrue o (PredAny n) =
+        BDDv [0] prTrue $ reducePred o (PredPerm (PermPerm $ ArgArg [1]) (reducePred' prTrue o $ PredAny (n-1)))      
+reducePred o (PredAll n) =
+  reducePred' PredFalse o (PredAll n)
+    where
+      reducePred' _ _ (PredAll 0) =
+        PredTrue
+      reducePred' prFalse o (PredAll n) =
+        BDDv [0] (reducePred o (PredPerm (PermPerm $ ArgArg [1]) (reducePred' prFalse o $ PredAll (n-1)))) prFalse
+reducePred o (PredPerm perm1 (PredPerm perm2 x)) =
+ reducePred o (PredPerm (PermComp perm2 perm1) x)
+reducePred o (PredPerm perm (BDDv i a b)) | case b of {PredFalse -> True; _ -> True} =
+  BDDv (toIndexFunc perm i) (reducePred o $ PredPerm perm a) (reducePred o $ PredPerm perm b)
+reducePred o (PredPerm perm PredTrue) =
+  PredTrue
+reducePred o (PredPerm perm PredFalse) =
+  PredFalse
+reducePred o (PredPerm perm x) =
+  reducePred o (PredPerm perm $ reducePred o x)
+reducePred _ x@(BDDv i a b) = x
+reducePred _ x = error $ show x

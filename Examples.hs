@@ -96,10 +96,20 @@ outputDepth = length.second.arithSignature
 -- predicate on whole input and output stacks
 predArith ar = 
   pred &&* BDDeq [0,inl] [1,outl] true false
-      where
-        pred = arithPredicate ar
-	inl = inputDepth ar
-	outl = outputDepth ar
+    where
+      pred = arithPredicate ar
+      inl = inputDepth ar
+      outl = outputDepth ar
+
+templateValueType t =
+  argTemplate $ binSize t
+      
+templateArith ar =
+  ArgList [
+    ArgArg $ map templateValueType $ first  $ arithSignature ar,
+    ArgArg $ map templateValueType $ second $ arithSignature ar
+  ]
+
 
 
 xorList _ [] = []
