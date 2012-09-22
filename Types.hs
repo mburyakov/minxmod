@@ -3,6 +3,7 @@ module Types where
 import qualified Data.Map as M
 import Data.Bits
 import Data.Int
+import ArgTree
 --import Data.Word
 import Predicates
 
@@ -151,6 +152,9 @@ binToVal (BitSetType _) b = BitSetValue b
 binToVal PidType b = error "binToVal PidType"
 binToVal (ErrorType s) [] = ErrorValue s
 
+instance Binarizable Value where
+  toArgList v = (toArgList.valToBin) v
+
 data Arithmetic = Arithmetic {
   -- input top of stack, output top of stack
   arithSignature :: ([ValueType], [ValueType]),
@@ -179,7 +183,7 @@ data Model = Model
   }
 
 data ProcState = Running
-  { 
+  {
     proc_prog :: Prog,
     proc_ip :: Int,
     proc_stack :: [Value],

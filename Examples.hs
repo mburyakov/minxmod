@@ -2,6 +2,7 @@ module Examples where
 
 import Types
 import Predicates
+import ArgTree
 import Data.Boolean
 
 withPerm perm pred = PredPerm (PermPerm perm) pred
@@ -94,13 +95,22 @@ outputDepth :: Arithmetic -> Int
 outputDepth = length.second.arithSignature
 
 -- predicate on whole input and output stacks
-predArith ar = 
+predArithStacks ar = 
   pred &&* BDDeq [0,inl] [1,outl] true false
     where
       pred = arithPredicate ar
       inl = inputDepth ar
       outl = outputDepth ar
 
+-- predicate on whole input and output stacks and pools      
+predArithThread ar = 
+      PredPerm (PermPerm $ ArgList [ArgArg [0,0,0], ArgArg [1,0,0]]) (predArithStacks ar)
+  &&* PredPerm (PermPerm $ ArgList [ArgArg [0,1], ArgArg [1,1]]) (BDDeq [0,0] [1,0] true false)
+
+-- predicate on whole input and output stacks and pools
+predGet var =
+  PredPerm (PermPerm $ ArgList [])
+      
 templateValueType t =
   argTemplate $ binSize t
       

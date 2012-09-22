@@ -3,59 +3,7 @@
 module Predicates where
 
 import Data.Boolean
-
-data ArgTree a = ArgArg { argArg :: a } | ArgList { argList :: [ArgTree a] } deriving Eq
-
-instance Functor ArgTree where
-  fmap f (ArgArg e)  = ArgArg  $ f e
-  fmap f (ArgList l) = ArgList $ map (fmap f) l
-
-instance Show a => Show (ArgTree a) where
-  show (ArgArg  b) = show b
-  show (ArgList l) = show l
-
-class ArgListable l where
-  toArgList :: [l] -> ArgTree Bool
-  
-instance ArgListable Char where
-  toArgList l = ArgList $ map (ArgArg.(\x -> case x of '0' -> False; '1' -> True)) l
-instance ArgListable Bool where
-  toArgList l = ArgList $ map ArgArg l
-instance ArgListable Integer where
-  toArgList l = ArgList $ map (ArgArg.(\x -> case x of 0 -> False; 1 -> True)) l
-instance ArgListable Int where
-  toArgList l = ArgList $ map (ArgArg.(\x -> case x of 0 -> False; 1 -> True)) l
-
-
-type ArgIndex = [Int]
-
-
-drop' n x | length x >= n = drop n x
-take' n x | length x >= n = take n x
-
-argDrop ::  ArgIndex -> ArgTree a -> ArgTree a
-argDrop [0]    t@(ArgArg arg) = t
-argDrop [i]    (ArgList list) = ArgList $ drop' i list
-argDrop (i:il) (ArgList list) = argDrop il (list !! i)
-
-argSoftDrop ::  ArgIndex -> ArgTree a -> (ArgIndex, ArgTree a)
-argSoftDrop l    t@(ArgArg arg) = (l, t)
-argSoftDrop [i]    (ArgList list) = ([], ArgList $ drop' i list)
-argSoftDrop (i:il) (ArgList list) = argSoftDrop il (list !! i)
-
-argHead (ArgList list) = head list
-
-(!!!) :: ArgTree a -> ArgIndex -> ArgTree a
-tree !!! [] = tree
-tree !!! i = argHead $ argDrop i tree
-
-(!!!!) :: ArgTree a -> ArgIndex -> a
-tree !!!! i = argArg $ tree !!! i
-
-
-type ArgTemplate = ArgTree ()
-
-argTemplate n = ArgList $ map ArgArg $ replicate n ()
+import ArgTree
 
 data Predicate =
     PredTrue
@@ -63,19 +11,19 @@ data Predicate =
   | PredArg   ArgIndex
   | PredNeg       (Predicate)
   | PredOr        (Predicate) (Predicate)
-  | PredAnd       (Predicate) (Predicate)
+--  | PredAnd       (Predicate) (Predicate)
   | PredPerm      (Permutation Bool) (Predicate)
   | PredAll   Int
   | PredAny   Int
   | BDDv ArgIndex (Predicate) (Predicate)
   | BDDeq ArgIndex ArgIndex (Predicate) (Predicate)
-  deriving (Show)
+  deriving (Show, Eq)
 
 instance Boolean Predicate where
   true = PredTrue
   false = PredFalse
   notB = PredNeg
-  (&&*) = PredAnd
+  (&&*) a b = notB (notB a ||* notB b)
   (||*) = PredOr
 
 instance EqB Predicate Predicate where
@@ -88,7 +36,7 @@ instance IfB Predicate Predicate where
 data Permutation a =
     PermComp (Permutation a) (Permutation a)   
   | PermPerm (ArgTree ArgIndex)
-  deriving (Show)
+  deriving (Show, Eq)
 
 toFunc :: Predicate -> ArgTree Bool -> Bool
 toFunc PredTrue        x = true
@@ -96,7 +44,7 @@ toFunc PredFalse       x = false
 toFunc (PredArg i)     x = x !!!! i
 toFunc (PredNeg a)     x = notB $ toFunc a x
 toFunc (PredOr a b)    x = (toFunc a x) ||* (toFunc b x)
-toFunc (PredAnd a b)   x = (toFunc a x) &&* (toFunc b x)
+--toFunc (PredAnd a b)   x = (toFunc a x) &&* (toFunc b x)
 toFunc (PredPerm p a)  x = toFunc a $ toPerm p x
 toFunc (PredAll n) (ArgList l) = foldl (&&*) true  $ map argArg (take' n l)
 toFunc (PredAny n) (ArgList l) = foldl (||*) false $ map argArg (take' n l)
@@ -126,6 +74,7 @@ data ArgOrd = ArgOrd {
   argCompare :: ArgIndex -> ArgIndex -> Ordering
 }
 
+-- if using BDDv or BDDeq, variable order must correspond
 reducePred :: ArgOrd -> Predicate -> Predicate
 reducePred _ PredTrue = PredTrue
 reducePred _ PredFalse = PredFalse
@@ -133,7 +82,10 @@ reducePred _ (PredArg i) = BDDv i PredTrue PredFalse
 reducePred o (PredNeg (BDDv i a b)) = BDDv i (reducePred o (notB a)) (reducePred o (notB b))
 reducePred _ (PredNeg PredTrue)  = PredFalse
 reducePred _ (PredNeg PredFalse) = PredTrue
-reducePred o (PredNeg x) = reducePred o $ PredNeg $ reducePred o x
+reducePred o (PredNeg (BDDeq i j a b)) = BDDeq i j (reducePred o (notB a)) (reducePred o (notB b))
+--reducePred o (PredNeg (PredPerm perm x)) = (PredPerm perm $ reducePred o (PredNeg x))
+reducePred o (PredNeg x) = 
+  reducePred o $ PredNeg $ reducePred o x
 reducePred o (PredOr t1@(BDDv i1 a1 b1) t2@(BDDv i2 a2 b2)) =
   case argCompare o i1 i2 of
     EQ -> BDDv i1 (reducePred o (a1||*a2)) (reducePred o (b1||*b2))
@@ -147,9 +99,30 @@ reducePred o (PredOr t1 PredFalse) =
   reducePred o t1
 reducePred o (PredOr PredFalse t2) =
   reducePred o t2
+reducePred o (PredOr t1@(BDDeq i1 j1 a1 b1) t2@(BDDv i2 a2 b2)) =
+  case (argCompare o i1 i2, argCompare o j1 i2) of
+    (EQ, _) ->
+      reducePred o (PredOr lhs t2)
+    (_, EQ) ->
+      reducePred o (PredOr lhs t2)
+    (GT, GT) ->
+      BDDv i2 (reducePred o (a2||*t1)) (reducePred o (b2||*t1))
+    (LT, LT) ->
+      if (i2 `follows` i1)
+        
+  where
+    lhs = BDDv (passInto i1)
+           (BDDv (passInto j1)
+             (BDDeq (nipOne i1) (nipOne j1) a1 b1)
+             b1)
+           (BDDv (passInto j1)
+             a1
+             (BDDeq (nipOne i1) (nipOne j1) b1 a1))             
+reducePred o (PredOr (BDDv i2 a2 b2) (BDDeq i1 j1 a1 b1)) =
+  reducePred o (PredOr (BDDeq i1 j1 a1 b1) (BDDv i2 a2 b2))
 reducePred o (PredOr x y) =
   reducePred o $ PredOr (reducePred o x) (reducePred o y)
-reducePred o (PredAnd t1@(BDDv i1 a1 b1) t2@(BDDv i2 a2 b2)) =
+{--reducePred o (PredAnd t1@(BDDv i1 a1 b1) t2@(BDDv i2 a2 b2)) =
   case argCompare o i1 i2 of
     EQ -> BDDv i1 (reducePred o (a1&&*a2)) (reducePred o (b1&&*b2))
     LT -> BDDv i1 (reducePred o (a1&&*t2)) (reducePred o (b1&&*t2))
@@ -163,7 +136,7 @@ reducePred o (PredAnd t1 PredTrue) =
 reducePred o (PredAnd PredTrue t2) =
   reducePred o t2
 reducePred o (PredAnd x y) =
-  reducePred o $ PredAnd (reducePred o x) (reducePred o y)
+  reducePred o $ PredAnd (reducePred o x) (reducePred o y)--}
 reducePred o (PredAny n) =
   reducePred' PredTrue o (PredAny n)
     where
@@ -179,14 +152,28 @@ reducePred o (PredAll n) =
       reducePred' prFalse o (PredAll n) =
         BDDv [0] (reducePred o (PredPerm (PermPerm $ ArgArg [1]) (reducePred' prFalse o $ PredAll (n-1)))) prFalse
 reducePred o (PredPerm perm1 (PredPerm perm2 x)) =
- reducePred o (PredPerm (PermComp perm2 perm1) x)
+  reducePred o (PredPerm (PermComp perm2 perm1) x)
 reducePred o (PredPerm perm (BDDv i a b)) | case b of {PredFalse -> True; _ -> True} =
   BDDv (toIndexFunc perm i) (reducePred o $ PredPerm perm a) (reducePred o $ PredPerm perm b)
 reducePred o (PredPerm perm PredTrue) =
   PredTrue
 reducePred o (PredPerm perm PredFalse) =
   PredFalse
-reducePred o (PredPerm perm x) =
-  reducePred o (PredPerm perm $ reducePred o x)
+--reducePred o (PredPerm perm x) =
+--  reducePred o (PredPerm perm $ reducePred o x)
+reducePred o (PredPerm perm x) = 
+  if new==old
+  then
+    error $ "oldperm = " ++ show old
+  else
+    new
+  where
+    new = (PredPerm perm $ reducePred o x)
+    old = (PredPerm perm x)
 reducePred _ x@(BDDv i a b) = x
+reducePred _ x@(BDDeq i j a b) = x
+--reducePred o x@(BDDeq i j a b) = BDDv (i++[0])
+--                                 (BDDv (j++[0])
+--                                   (PredPerm (PermPerm $ ArgList [ArgArg [0,1],ArgArg [1,1]]) x) b)
+--                                   b
 reducePred _ x = error $ show x
