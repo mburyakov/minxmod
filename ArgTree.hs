@@ -8,25 +8,33 @@ instance Functor ArgTree where
   fmap f (ArgArg e)  = ArgArg  $ f e
   fmap f (ArgList l) = ArgList $ map (fmap f) l
 
+argFlatten :: ArgTree (ArgTree v) -> ArgTree v
+argFlatten (ArgArg e) =
+  e
+argFlatten (ArgList l) =
+  ArgList $ map argFlatten l  
+  
 instance Show a => Show (ArgTree a) where
   show (ArgArg  b) = show b
   show (ArgList l) = show l
 
-class Binarizable l where
-  toArgList :: l -> ArgTree Bool
+class Binarizable v where
+  toArgList :: v -> ArgTree Bool
   
 --instance Binarizable [Char] where
 --  toArgList l = ArgList $ map (ArgArg.(\x -> case x of '0' -> False; '1' -> True)) l
 instance Binarizable Bool where
   toArgList b = ArgArg b
-instance Binarizable (ArgTree Bool) where
-  toArgList l = l
+--instance Binarizable (ArgTree Bool) where
+--  toArgList l = l
 --instance Binarizable [Integer] where
 --  toArgList l = ArgList $ map (ArgArg.(\x -> case x of 0 -> False; 1 -> True)) l
 --instance Binarizable [Int] where
 --  toArgList l = ArgList $ map (ArgArg.(\x -> case x of 0 -> False; 1 -> True)) l
 instance Binarizable v => Binarizable [v] where
   toArgList l = ArgList $ map toArgList l
+instance Binarizable v => Binarizable (ArgTree v) where
+  toArgList l = argFlatten $ fmap toArgList l
 
 type ArgIndex = [Int]
 
@@ -59,13 +67,19 @@ nipOne list =
     where
       rev = reverse list
 
+nipInfinity :: ArgIndex -> ArgIndex
+nipInfinity list =
+  reverse $ (maxBound `asTypeOf` head rev):(tail rev)
+    where
+      rev = reverse list
+      
 passInto :: ArgIndex -> ArgIndex
 passInto list = 
   list ++ [0]
-
+  
 contains :: ArgIndex -> ArgIndex -> Bool
-infix 7 `follows`
-b `follows` a =
+infix 7 `contains`
+b `contains` a =
   ta == tb && hb < ha
     where
       ta = tail $ reverse a

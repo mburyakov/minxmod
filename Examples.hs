@@ -27,7 +27,7 @@ predEq n m =
 predInc n 0 =
   false
 predInc 0 m =
-  withAfter $ (PredArg [0]) &&* (PredPerm (PermPerm $ ArgArg [1]) (notB (PredAny m)))
+  withAfter $ (PredArg [0]) &&* (PredPerm (PermPerm $ ArgArg [1]) (notB (PredAny (m-1))))
 predInc n m =
   ifB
     ((PredArg [0,0]) ==* (PredArg [1,0]))
@@ -85,7 +85,7 @@ byteV = SmallBoundedValue (-127) 128
 arByteAdd = Arithmetic {
   arithSignature = ([byteT, byteT], [byteT]),
   arithFunc = \s -> [byteV (sbValue (s!!0) + sbValue (s!!1)): drop 2 s],
-  arithPredicate = predAdd 8 8 8
+  arithPredicate = predAdd 1 1 2
 }
 
 inputDepth :: Arithmetic -> Int
@@ -96,7 +96,7 @@ outputDepth = length.second.arithSignature
 
 -- predicate on whole input and output stacks
 predArithStacks ar = 
-  pred &&* BDDeq [0,inl] [1,outl] true false
+  pred &&* (PredBDD $ BDDeq [0,inl] [1,outl] BDDTrue BDDFalse)
     where
       pred = arithPredicate ar
       inl = inputDepth ar
@@ -105,8 +105,16 @@ predArithStacks ar =
 -- predicate on whole input and output stacks and pools      
 predArithThread ar = 
       PredPerm (PermPerm $ ArgList [ArgArg [0,0,0], ArgArg [1,0,0]]) (predArithStacks ar)
-  &&* PredPerm (PermPerm $ ArgList [ArgArg [0,1], ArgArg [1,1]]) (BDDeq [0,0] [1,0] true false)
-
+  &&* PredPerm (PermPerm $ ArgList [ArgArg [0,1], ArgArg [1,1]]) (PredBDD $ BDDeq [0,0] [1,0] BDDTrue BDDFalse)
+  
+arByteAddStacksOrdering = ArgOrd {
+  show' = "Base",
+  argCompare = \x y -> 
+                        compare (permute x) (permute y)               
+  }
+    where
+      permute l = [l!!1, l!!0] ++ (tail.tail) l
+  
 -- predicate on whole input and output stacks and pools
 predGet var =
   PredPerm (PermPerm $ ArgList [])

@@ -4,7 +4,9 @@ module Checker where
 
 import Test.QuickCheck
 import Types
+import ArgTree
 import Examples
+import Illustrations
 import Predicates
 import Data.Boolean
 
