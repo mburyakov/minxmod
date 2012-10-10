@@ -85,7 +85,7 @@ byteV = SmallBoundedValue (-127) 128
 arByteAdd = Arithmetic {
   arithSignature = ([byteT, byteT], [byteT]),
   arithFunc = \s -> [byteV (sbValue (s!!0) + sbValue (s!!1)): drop 2 s],
-  arithPredicate = predAdd 1 1 2
+  arithPredicate = predAdd 8 8 8
 }
 
 inputDepth :: Arithmetic -> Int
@@ -109,11 +109,16 @@ predArithThread ar =
   
 arByteAddStacksOrdering = ArgOrd {
   show' = "Base",
-  argCompare = \x y -> 
-                        compare (permute x) (permute y)               
+  argCompare = \x y ->
+    case (isTail x, isTail y) of
+      (False, False) -> compare (permute x) (permute y)
+      (True, False) -> GT
+      (False, True) -> LT
+      (True, True) -> compare x y
   }
     where
-      permute l = [l!!1, l!!0] ++ (tail.tail) l
+      permute l = ((tail.tail) l) ++ [l!!0, l!!1]
+      isTail l = l!!1>=2 || (l!!0==1 && l!!1==1)
   
 -- predicate on whole input and output stacks and pools
 predGet var =

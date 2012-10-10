@@ -6,7 +6,7 @@ import Test.QuickCheck
 import Types
 import ArgTree
 import Examples
-import Illustrations
+--import Illustrations
 import Predicates
 import Data.Boolean
 
@@ -36,4 +36,7 @@ checkIntegerGrayCode (NonNegative n) = checkInjection (Bimorphism (grayCode::Int
 
 
 checkPredReduce o pred x =
-  toFunc pred x == (toFunc $ reducePred o pred) x
+  (ans1, ans2, ans1==ans2)
+    where
+      ans1 = toFunc pred x
+      ans2 = (toFunc $ reducePred o pred) x

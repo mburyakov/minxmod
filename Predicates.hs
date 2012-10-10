@@ -137,7 +137,6 @@ reducePred o (PredOr t1@(PredBDD (BDDeq i1 j1 a1 b1)) t2@(PredBDD (BDDv i2 a2 b2
     (_, EQ) ->
       reducePred o (PredOr lhs t2)
     (GT, GT) ->
-      --error $ show t2
       BDDv i2 (reducePred o (PredBDD a2||*t1)) (reducePred o (PredBDD b2||*t1))
     (LT, LT) ->
       if
@@ -150,16 +149,27 @@ reducePred o (PredOr t1@(PredBDD (BDDeq i1 j1 a1 b1)) t2@(PredBDD (BDDv i2 a2 b2
             (BDDeq i1 j1 (reducePred o (PredBDD a1||*t2)) (reducePred o (PredBDD b1||*t2)))
           (GT, GT) ->
             reducePred o (PredOr lhs t2)
-        
-        
+          _ -> error "Variable order does not correspond to BDDeq container"
+    (LT, GT) -> reducePred o (PredOr lhs t2)
+    (GT, LT) -> reducePred o (PredOr lhs t2)    
   where
-    lhs = PredBDD $ BDDv (passInto i1)
-           (BDDv (passInto j1)
-             (BDDeq (nipOne i1) (nipOne j1) a1 b1)
-             b1)
-           (BDDv (passInto j1)
-             a1
-             (BDDeq (nipOne i1) (nipOne j1) b1 a1))             
+    lhs = case (argCompare o i1 j1) of
+            LT ->
+			  PredBDD $ BDDv (passInto i1)
+                (BDDv (passInto j1)
+                  (BDDeq (nipOne i1) (nipOne j1) a1 b1)
+                  b1)
+                (BDDv (passInto j1)
+                  a1
+                  (BDDeq (nipOne i1) (nipOne j1) b1 a1))
+            GT ->
+			  PredBDD $ BDDv (passInto j1)
+                (BDDv (passInto i1)
+                  (BDDeq (nipOne j1) (nipOne i1) a1 b1)
+                  b1)
+                (BDDv (passInto i1)
+                  a1
+                  (BDDeq (nipOne j1) (nipOne i1) b1 a1))
 reducePred o (PredOr (PredBDD (BDDv i2 a2 b2)) (PredBDD (BDDeq i1 j1 a1 b1))) =
   reducePred o (PredOr (PredBDD (BDDeq i1 j1 a1 b1)) (PredBDD (BDDv i2 a2 b2)))
 reducePred o (PredOr x y) =
