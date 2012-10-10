@@ -14,10 +14,9 @@ ill1 =
 -- output: BDDv [0,0] PredTrue (BDDeq [0,1] [1,0] PredTrue PredFalse)
 
 ill1' =
-  reducePred ao $ (PredBDD $ BDDeq [0,0] [1,0] BDDTrue BDDFalse)||*(PredBDD $ BDDv [0,0] BDDTrue BDDFalse)
+  reducePred ao $ (PredBDD $ BDDeq [0,0] [1,0] BDDTrue BDDFalse)||*(PredBDD $ BDDv [0,0,0] BDDTrue BDDFalse)
     where
       ao = ArgOrd (\x y -> compare (reverse x) (reverse y)) ""
--- output: BDDv [0,0] PredTrue (BDDeq [0,1] [1,0] PredTrue PredFalse)
 
 ill2 =
   reducePred arByteAddStacksOrdering $ x

@@ -131,7 +131,12 @@ reducePred o (PredOr t1 (PredBDD BDDFalse)) =
 reducePred o (PredOr (PredBDD BDDFalse) t2) =
   reducePred o t2
 reducePred o (PredOr t1@(PredBDD (BDDeq i1 j1 a1 b1)) t2@(PredBDD (BDDv i2 a2 b2))) =
-  case (argCompare o i1 i2, argCompare o j1 i2) of
+  if
+    (argCompare o i1 (passInto i2) == EQ || argCompare o j1 (passInto i2) == EQ)
+  then
+    reducePred o (PredOr lhs' t2)
+  else
+   case (argCompare o i1 i2, argCompare o j1 i2) of
     (EQ, _) ->
       reducePred o (PredOr lhs t2)
     (_, EQ) ->
@@ -153,23 +158,30 @@ reducePred o (PredOr t1@(PredBDD (BDDeq i1 j1 a1 b1)) t2@(PredBDD (BDDv i2 a2 b2
     (LT, GT) -> reducePred o (PredOr lhs t2)
     (GT, LT) -> reducePred o (PredOr lhs t2)    
   where
-    lhs = case (argCompare o i1 j1) of
-            LT ->
-			  PredBDD $ BDDv (passInto i1)
-                (BDDv (passInto j1)
-                  (BDDeq (nipOne i1) (nipOne j1) a1 b1)
-                  b1)
-                (BDDv (passInto j1)
-                  a1
-                  (BDDeq (nipOne i1) (nipOne j1) b1 a1))
-            GT ->
-			  PredBDD $ BDDv (passInto j1)
-                (BDDv (passInto i1)
-                  (BDDeq (nipOne j1) (nipOne i1) a1 b1)
-                  b1)
-                (BDDv (passInto i1)
-                  a1
-                  (BDDeq (nipOne j1) (nipOne i1) b1 a1))
+    lhs =
+      trace ("i1 = " ++ show i1 ++ " j1 = " ++ show j1 ++ " i2 = " ++ show i2) $ PredBDD $ BDDeq
+        (passInto i1)
+        (passInto j1)
+        (BDDeq (nipOne i1) (nipOne j1) a1 b1)
+        b1
+    lhs' =
+	  case argCompare o i1 j1 of
+        LT ->
+          PredBDD $ BDDv (passOut i1)
+            (BDDv (passOut j1)              
+              a1
+			  b1)
+            (BDDv (passOut j1)
+              b1
+              a1)
+        GT ->
+          PredBDD $ BDDv (passOut j1)
+            (BDDv (passOut i1)              
+              a1
+			  b1)
+            (BDDv (passOut i1)
+              b1
+              a1)
 reducePred o (PredOr (PredBDD (BDDv i2 a2 b2)) (PredBDD (BDDeq i1 j1 a1 b1))) =
   reducePred o (PredOr (PredBDD (BDDeq i1 j1 a1 b1)) (PredBDD (BDDv i2 a2 b2)))
 reducePred o (PredOr x y) =

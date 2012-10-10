@@ -76,6 +76,10 @@ nipInfinity list =
 passInto :: ArgIndex -> ArgIndex
 passInto list = 
   list ++ [0]
+
+passOut :: ArgIndex -> ArgIndex
+passOut list = 
+  reverse (tail (reverse list))
   
 contains :: ArgIndex -> ArgIndex -> Bool
 infix 7 `contains`
