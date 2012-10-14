@@ -1,4 +1,5 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Predicates where
 
@@ -33,13 +34,14 @@ instance Boolean Predicate where
   notB = PredNeg
   (&&*) a b = notB (notB a ||* notB b)
   (||*) = PredOr
-  
-instance EqB Predicate Predicate where
+
+type instance BooleanOf Predicate = Predicate
+
+instance EqB Predicate where
   l ==* r = (l &&* r) ||* (notB l &&* notB r)
 
-instance IfB Predicate Predicate where
+instance IfB Predicate where
   ifB c l r = (c &&* l) ||* (notB c &&* r)
-
 
 data Permutation a =
     PermComp (Permutation a) (Permutation a)   
