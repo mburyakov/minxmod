@@ -21,6 +21,11 @@ data Insn =
   | Spawn String Prog
   | Assert String
 
+instance Show Insn where
+  show (Label str insn) = "Label \"" ++ str ++ "\": " ++ show insn
+  show (Block insns) = "{\n" ++ show insns ++ "}\n"
+  show _ = "Insn ...\n"
+
 data Value =
     BoolValue Bool 
   | IntValue Int8
@@ -173,7 +178,7 @@ instance Show Pid where
 data Prog = Prog 
   { 
     prog_insns :: [Insn] 
-  }
+  } deriving Show
   
 data Model = Model
   {    

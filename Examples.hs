@@ -13,6 +13,12 @@ withAfter  = withSecond
 withFirst  = withPerm $ ArgArg [0,0]
 withSecond = withPerm $ ArgArg [1,0]
 
+predIs [] =
+  PredBDD BDDTrue       
+predIs (x:xs) =
+  (if x then (PredArg [0]) else notB (PredArg [0]))
+   &&* withPerm (ArgArg[1]) (predIs xs) 
+
 predEq 0 m =
   withAfter  $ notB (PredAny m)
 predEq n 0 =
@@ -85,8 +91,26 @@ byteV = SmallBoundedValue (-127) 128
 arByteAdd = Arithmetic {
   arithSignature = ([byteT, byteT], [byteT]),
   arithFunc = \s -> [byteV (sbValue (s!!0) + sbValue (s!!1)): drop 2 s],
-  arithPredicate = predAdd 8 8 8
+  arithPredicate = predAdd size size size
 }
+  where
+    size = binSize byteT
+
+arBytePush val = Arithmetic {
+  arithSignature = ([], [byteT]),
+  arithFunc = \s -> [val : s],
+  arithPredicate = withPerm (ArgArg[1,0,0]) $ predIs $ valToBin val
+}
+  where
+    size = binSize byteT
+
+arBytePop = Arithmetic {
+  arithSignature = ([byteT], []),
+  arithFunc = \s -> [tail s],
+  arithPredicate = PredBDD BDDTrue
+}
+  where
+    size = binSize byteT
 
 inputDepth :: Arithmetic -> Int
 inputDepth = length.first.arithSignature
@@ -119,11 +143,11 @@ arByteAddStacksOrdering = ArgOrd {
     where
       permute l = ((tail.tail) l) ++ [l!!0, l!!1]
       isTail l = l!!1>=2 || (l!!0==1 && l!!1==1)
-  
+
 -- predicate on whole input and output stacks and pools
-predGet var =
-  PredPerm (PermPerm $ ArgList [])
-      
+--predGet var =
+  --PredPerm (PermPerm $ ArgList []) (BDDeq)
+ 
 templateValueType t =
   argTemplate $ binSize t
       
@@ -149,4 +173,7 @@ grayCode n =
 fromGrayCode l =
   binToInt $ reverse $ deXorList False $ reverse l
 
---predLine n (Arith (Arithmetic sign func pred) =
+predLine n (Arith ar) =
+  withPerm (ArgArg[0,0,0]) (predIs $ valToBin (byteV n))
+    &&* withPerm (ArgArg[1,0,0]) (predIs $ valToBin (byteV (n+1)))  
+      &&* withPerm (ArgList [ArgArg[0,1,0],ArgArg[1,1,0]]) (predArithThread ar)   

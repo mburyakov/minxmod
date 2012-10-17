@@ -1,10 +1,13 @@
 module Illustrations where
 
+import Types
 import Examples
 import Predicates
 import Data.Boolean
 import ArgTree
 import Checker
+import Symbolic
+import Main
 
 
 ill1 =
@@ -32,6 +35,26 @@ ill3 =
   
 ill4 =
   checkPredReduce arByteAddStacksOrdering x $ toArgList [[[T,T,T,T,T,F,T,T],[F,F,F,F,F,T,F,F],[]],[[T,T,T,T,T,T,T,T],[]]]
+
+ill5 =
+  toFunc p $ toArgList[[toArgList[T,F,F,F,F,F,F,F],toArgList[[[F,F,F,F,F,F,F,F],[F,F,F,F,F,F,F,F]],[]]],[toArgList[F,T,F,F,F,F,F,F],toArgList[[[F,F,F,F,F,F,F,F]],[]]]]
+    where
+      p = predArByteAddLine 1
+      predArByteAddLine n = 
+        predLine n (Arith arByteAdd)
+-- output: True  
+
+ill6 =
+  toFunc p $ toArgList[[toArgList[T,F,F,F,F,F,F,F],toArgList[[[F,F,F,F,F,F,F,F]],[]]],[toArgList[F,T,F,F,F,F,F,F],toArgList[[[T,F,T,F,F,F,F,F],[F,F,F,F,F,F,F,F]],[]]]]
+    where
+      p = predArBytePushLine 1 (byteV 5)
+      predArBytePushLine n v = 
+        predLine n (Arith $ arBytePush v)
+-- output: True  
+
+ill7 = do
+  putStrLn $ show $ incrementer "var"
+  putStrLn $ show $ integerEnumerateProg $ incrementer "var"
 
 data B = T | F
 instance Binarizable B where
