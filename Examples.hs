@@ -3,21 +3,8 @@ module Examples where
 import Types
 import Predicates
 import ArgTree
+import Symbolic
 import Data.Boolean
-
-withPerm perm pred = PredPerm (PermPerm perm) pred
-
-withBefore = withFirst
-withAfter  = withSecond
-
-withFirst  = withPerm $ ArgArg [0,0]
-withSecond = withPerm $ ArgArg [1,0]
-
-predIs [] =
-  PredBDD BDDTrue       
-predIs (x:xs) =
-  (if x then (PredArg [0]) else notB (PredArg [0]))
-   &&* withPerm (ArgArg[1]) (predIs xs) 
 
 predEq 0 m =
   withAfter  $ notB (PredAny m)
@@ -82,9 +69,6 @@ predIncAdd n1 n2 na =
         (PredPerm (PermPerm $ ArgList [ArgList [ArgArg [0,0,1], ArgArg [0,1,1]], ArgList [ArgArg [1,0,1]]]) (predIncAdd (n1-1) (n2-1) (na-1)))
         (PredPerm (PermPerm $ ArgList [ArgList [ArgArg [0,0,1], ArgArg [0,1,1]], ArgList [ArgArg [1,0,1]]]) (predAdd (n1-1) (n2-1) (na-1))))
 
-first  (x,y) = x
-second (x,y) = y
-
 byteT = SmallBoundedType (-127) 128
 byteV = SmallBoundedValue (-127) 128
 
@@ -98,8 +82,8 @@ arByteAdd = Arithmetic {
 
 arBytePush val = Arithmetic {
   arithSignature = ([], [byteT]),
-  arithFunc = \s -> [val : s],
-  arithPredicate = withPerm (ArgArg[1,0,0]) $ predIs $ valToBin val
+  arithFunc = \s -> [byteV val : s],
+  arithPredicate = withPerm (ArgArg[1,0,0]) $ predIs $ valToBin $ byteV val
 }
   where
     size = binSize byteT
@@ -107,29 +91,10 @@ arBytePush val = Arithmetic {
 arBytePop = Arithmetic {
   arithSignature = ([byteT], []),
   arithFunc = \s -> [tail s],
-  arithPredicate = PredBDD BDDTrue
+  arithPredicate = true
 }
   where
     size = binSize byteT
-
-inputDepth :: Arithmetic -> Int
-inputDepth = length.first.arithSignature
-
-outputDepth :: Arithmetic -> Int
-outputDepth = length.second.arithSignature
-
--- predicate on whole input and output stacks
-predArithStacks ar = 
-  pred &&* (PredBDD $ BDDeq [0,inl] [1,outl] BDDTrue BDDFalse)
-    where
-      pred = arithPredicate ar
-      inl = inputDepth ar
-      outl = outputDepth ar
-
--- predicate on whole input and output stacks and pools      
-predArithThread ar = 
-      PredPerm (PermPerm $ ArgList [ArgArg [0,0,0], ArgArg [1,0,0]]) (predArithStacks ar)
-  &&* PredPerm (PermPerm $ ArgList [ArgArg [0,1], ArgArg [1,1]]) (PredBDD $ BDDeq [0,0] [1,0] BDDTrue BDDFalse)
   
 arByteAddStacksOrdering = ArgOrd {
   show' = "Base",
@@ -157,7 +122,10 @@ templateArith ar =
     ArgArg $ map templateValueType $ second $ arithSignature ar
   ]
 
-
+simpleProgram1 =
+  compile [
+    Label "begin" $ Arith $ arBytePush 5
+  ]
 
 xorList _ [] = []
 xorList True  (x:xs) = (not x) : xorList x xs
@@ -172,8 +140,3 @@ grayCode n =
 
 fromGrayCode l =
   binToInt $ reverse $ deXorList False $ reverse l
-
-predLine n (Arith ar) =
-  withPerm (ArgArg[0,0,0]) (predIs $ valToBin (byteV n))
-    &&* withPerm (ArgArg[1,0,0]) (predIs $ valToBin (byteV (n+1)))  
-      &&* withPerm (ArgList [ArgArg[0,1,0],ArgArg[1,1,0]]) (predArithThread ar)   

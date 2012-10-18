@@ -41,15 +41,15 @@ ill5 =
     where
       p = predArByteAddLine 1
       predArByteAddLine n = 
-        predLine n (Arith arByteAdd)
+        predLine byteV (EnumInsn n (Arith arByteAdd))
 -- output: True  
 
 ill6 =
   toFunc p $ toArgList[[toArgList[T,F,F,F,F,F,F,F],toArgList[[[F,F,F,F,F,F,F,F]],[]]],[toArgList[F,T,F,F,F,F,F,F],toArgList[[[T,F,T,F,F,F,F,F],[F,F,F,F,F,F,F,F]],[]]]]
     where
-      p = predArBytePushLine 1 (byteV 5)
+      p = predArBytePushLine 1 5
       predArBytePushLine n v = 
-        predLine n (Arith $ arBytePush v)
+        predLine byteV (EnumInsn n (Arith $ arBytePush v))
 -- output: True  
 
 ill7 = do
