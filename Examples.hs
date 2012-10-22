@@ -69,8 +69,8 @@ predIncAdd n1 n2 na =
         (PredPerm (PermPerm $ ArgList [ArgList [ArgArg [0,0,1], ArgArg [0,1,1]], ArgList [ArgArg [1,0,1]]]) (predIncAdd (n1-1) (n2-1) (na-1)))
         (PredPerm (PermPerm $ ArgList [ArgList [ArgArg [0,0,1], ArgArg [0,1,1]], ArgList [ArgArg [1,0,1]]]) (predAdd (n1-1) (n2-1) (na-1))))
 
-byteT = SmallBoundedType (-127) 128
-byteV = SmallBoundedValue (-127) 128
+byteT = SmallBoundedType (-3) 4
+byteV = SmallBoundedValue (-3) 4
 
 arByteAdd = Arithmetic {
   arithSignature = ([byteT, byteT], [byteT]),
@@ -97,7 +97,7 @@ arBytePop = Arithmetic {
     size = binSize byteT
   
 arByteAddStacksOrdering = ArgOrd {
-  show' = "Base",
+  ordShow = "arByteAddStacksOrdering",
   argCompare = \x y ->
     case (isTail x, isTail y) of
       (False, False) -> compare (permute x) (permute y)
@@ -109,22 +109,21 @@ arByteAddStacksOrdering = ArgOrd {
       permute l = ((tail.tail) l) ++ [l!!0, l!!1]
       isTail l = l!!1>=2 || (l!!0==1 && l!!1==1)
 
--- predicate on whole input and output stacks and pools
---predGet var =
-  --PredPerm (PermPerm $ ArgList []) (BDDeq)
- 
 templateValueType t =
   argTemplate $ binSize t
       
 templateArith ar =
   ArgList [
-    ArgArg $ map templateValueType $ first  $ arithSignature ar,
-    ArgArg $ map templateValueType $ second $ arithSignature ar
+    ArgArg $ map templateValueType $ fst  $ arithSignature ar,
+    ArgArg $ map templateValueType $ snd $ arithSignature ar
   ]
 
 simpleProgram1 =
   compile [
-    Label "begin" $ Arith $ arBytePush 5
+    Label "begin" $ Arith $ arBytePush 5,
+    Arith $ arBytePush 3,
+    Arith $ arByteAdd,
+    Arith $ arBytePop
   ]
 
 xorList _ [] = []

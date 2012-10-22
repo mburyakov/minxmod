@@ -67,6 +67,12 @@ nipOne list =
     where
       rev = reverse list
 
+nipN :: Int -> ArgIndex -> ArgIndex
+nipN n list =
+  reverse $ (n + head rev):(tail rev)
+    where
+      rev = reverse list
+
 nipInfinity :: ArgIndex -> ArgIndex
 nipInfinity list =
   reverse $ (maxBound `asTypeOf` head rev):(tail rev)

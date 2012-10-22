@@ -3,6 +3,11 @@ module Illustrations where
 import Types
 import Examples
 import Predicates
+import BDD
+import qualified Data.Map as Map
+import Data.Graph.Inductive.Tree
+import qualified Data.Graph.Inductive.Graph as Graph
+import Data.GraphViz
 import Data.Boolean
 import ArgTree
 import Checker
@@ -55,6 +60,18 @@ ill6 =
 ill7 = do
   putStrLn $ show $ incrementer "var"
   putStrLn $ show $ integerEnumerateProg $ incrementer "var"
+
+ill8 =
+  progToBDD simpleProgram1
+
+boxedBDD1 =
+  putBDD (BDDv [0] BDDTrue (BDDeq [1] [2] BDDFalse BDDTrue)) emptyBox
+
+ill9 =
+  getBDD boxedBDD1
+
+ill10 =
+  printDotGraph $ defaultVis $ toGraph $ bddBox boxedBDD1
 
 data B = T | F
 instance Binarizable B where

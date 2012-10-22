@@ -10,8 +10,13 @@ withPerm perm pred = PredPerm (PermPerm perm) pred
 withBefore = withFirst
 withAfter  = withSecond
 
-withFirst  = withPerm $ ArgArg [0,0]
-withSecond = withPerm $ ArgArg [1,0]
+permFirst  = PermPerm $ ArgArg [0,0]
+permSecond = PermPerm $ ArgArg [1,0]
+
+withFirst  = PredPerm permFirst
+withSecond = PredPerm permSecond
+
+withStacks = withPerm (ArgList [ArgArg[0,1,0],ArgArg[1,1,0]])
 
 predIs [] =
   true       
@@ -68,18 +73,15 @@ valueEnumerateProg prog =
       valbindings = map (fmap fun) intbindings
       valprog = EnumProg valinsns valbindings
 
-first  (x,y) = x
-second (x,y) = y      
-      
 inputDepth :: Arithmetic -> Int
-inputDepth = length.first.arithSignature
+inputDepth = length.fst.arithSignature
 
 outputDepth :: Arithmetic -> Int
-outputDepth = length.second.arithSignature      
+outputDepth = length.snd.arithSignature      
       
 -- predicate on whole input and output stacks
 predArithStacks ar = 
-  pred &&* (PredBDD $ BDDeq [0,inl] [1,outl] BDDTrue BDDFalse)
+  pred &&* (eq [0,inl] [1,outl])
     where
       pred = arithPredicate ar
       inl = inputDepth ar
@@ -88,7 +90,7 @@ predArithStacks ar =
 -- predicate on whole input and output stacks and pools      
 predArithThread ar = 
       PredPerm (PermPerm $ ArgList [ArgArg [0,0,0], ArgArg [1,0,0]]) (predArithStacks ar)
-  &&* PredPerm (PermPerm $ ArgList [ArgArg [0,1], ArgArg [1,1]]) (PredBDD $ BDDeq [0,0] [1,0] BDDTrue BDDFalse)
+  &&* PredPerm (PermPerm $ ArgList [ArgArg [0,1], ArgArg [1,1]]) (eq [0,0] [1,0])
       
 predLine :: Integral s => (s -> Value) -> EnumInsn s -> Predicate
 predLine lineV (EnumInsn n (Arith ar)) =
@@ -96,11 +98,60 @@ predLine lineV (EnumInsn n (Arith ar)) =
     &&* withPerm (ArgArg[1,0,0]) (predIs $ valToBin (lineV (un+1)))
       &&* withPerm (ArgList [ArgArg[0,1,0],ArgArg[1,1,0]]) (predArithThread ar)
         where
-          un = fromIntegral n         
-      
-progToPred prog = 
-  foldl (&&*) (false) preds
+          un = fromIntegral n
+
+stateOrd :: ArgOrd
+stateOrd =
+  ArgOrd {
+    ordShow = "stateOrd",
+    argCompare = compare
+  }
+
+lineOrd :: Insn -> ArgOrd
+lineOrd (Arith ar) =
+  ArgOrd {
+    ordShow = "lineOrd",
+    argCompare = \x y ->
+      case (x !! 0, y !! 0) of
+      (0, 0) ->
+        argCompare (permOrd permFirst  stateOrd) x y
+      (1, 1) ->
+        argCompare (permOrd permSecond stateOrd) x y
+      (1, 0) ->
+        argCompare stateOrd (permute (inputDepth ar) x) (permute (outputDepth ar) y)
+      (0, 1) ->
+        argCompare stateOrd (permute (outputDepth ar) x) (permute (inputDepth ar) y)
+  } 
+    where
+      permute n i = [i !! 1] ++ [(i !! 2) + n] ++ (drop 3 i) ++ [i !! 0]
+
+globalOrd =
+  ArgOrd {
+    ordShow = "globalOrd",
+    argCompare = \x y ->
+      compare (permute x) (permute y)
+  }
+    where
+      permute i = (drop 1 i) ++ [i !! 0]
+
+bddLine :: Integral s => (s -> Value) -> EnumInsn s -> Predicate
+bddLine lineV (EnumInsn n insn@(Arith ar)) =
+  withPerm (ArgArg[0,0,0]) (predIs $ valToBin (lineV un))
+    &&* withPerm (ArgArg[1,0,0]) (predIs $ valToBin (lineV (un+1)))
+      &&* (PredBDD $ fixReduce (lineOrd insn) $ withStacks (predArithStacks ar))
+        where
+          un = fromIntegral n
+
+progToPred prog =
+  foldl (||*) (false) preds
     where
       (veprog, valfun) = valueEnumerateProg prog
       veinsns = map (fmap sbValue) $ enum_prog_insns veprog
       preds = map (predLine valfun) veinsns
+
+progToBDD prog =
+  reducePred globalOrd $ foldl (||*) (false) bdds
+    where
+      (veprog, valfun) = valueEnumerateProg prog
+      veinsns = map (fmap sbValue) $ enum_prog_insns veprog
+      bdds = map (bddLine valfun) veinsns
