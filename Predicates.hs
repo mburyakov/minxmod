@@ -14,6 +14,7 @@ data Predicate =
   | PredPerm      (Permutation Bool) (Predicate)
   | PredAll   Int
   | PredAny   Int
+  | PredExists Int Predicate
   | PredBDD   BDD
   deriving Show
 
@@ -33,6 +34,11 @@ instance Boolean Predicate where
   (||*) = PredOr
 
 eq i j = PredBDD (BDDeq i j BDDTrue BDDFalse)
+predExists n pred = 
+  PredExists n pred
+predForAll n pred = 
+  notB (PredExists n $ notB pred)
+
 
 type instance BooleanOf Predicate = Predicate
 
@@ -58,6 +64,13 @@ instance ToFuncable Predicate where
   toFunc (PredPerm p a)  x = toFunc a $ toPerm p x
   toFunc (PredAll n) (ArgList l) = foldl (&&*) true  $ map argArg (take' n l)
   toFunc (PredAny n) (ArgList l) = foldl (||*) false $ map argArg (take' n l)
+  toFunc (PredExists 0 a) (ArgList l) =
+    toFunc a (ArgList l)
+  toFunc (PredExists n a) (ArgList l) =
+      toFunc rec (ArgList $ ArgArg True:l)
+   || toFunc rec (ArgList $ ArgArg False:l)
+      where
+        rec = PredPerm (PermPerm $ ArgArg[-1]) $ PredExists (n-1) a
   toFunc t1 t2 = error (show t1 ++ show t2)
 
 instance ToFuncable BDD where  
@@ -102,6 +115,9 @@ permOrd perm ord =
   }
 
 fixReduce o b = BDDforceOrd o $ reducePred o b
+
+--reducePred' o x = trace (show x) $ reducePred o x
+reducePred' o x = reducePred o x
 
 -- if using BDDv or BDDeq, variable order must correspond
 reducePred :: ArgOrd -> Predicate -> BDD
@@ -207,4 +223,23 @@ reducePred o (PredPerm perm (PredBDD (BDDforceOrd newo x))) =
   reducePred newo (PredPerm perm (PredBDD x))
 reducePred o (PredPerm perm x) =
   reducePred o (PredPerm perm (PredBDD $ reducePred (permOrd perm o) x))
+reducePred o (PredExists 0 (PredBDD bdd@(BDDv i a b))) =
+  bdd
+reducePred o x@(PredExists n (PredBDD bdd@(BDDv i a b))) =
+  case argCompare o [0] i of
+    LT ->
+      bdd
+    EQ ->
+      reducePred' o (PredExists (n-1) (PredOr pa pb))
+        where
+          pa = PredPerm (PermPerm $ ArgArg[-1]) (PredBDD a)
+          pb = PredPerm (PermPerm $ ArgArg[-1]) (PredBDD b)
+    GT ->
+      reducePred o (PredBDD (BDDv i (reducePred' o (PredExists n (PredBDD a))) (reducePred' o (PredExists n (PredBDD b)))))
+reducePred o (PredExists n (PredBDD BDDTrue)) =
+  BDDTrue
+reducePred o (PredExists n (PredBDD BDDFalse)) =
+  BDDFalse
+reducePred o x@(PredExists n a) =
+  reducePred' o (PredExists n $ PredBDD $ reducePred' o a)
 --reducePred _ x = error $ show x

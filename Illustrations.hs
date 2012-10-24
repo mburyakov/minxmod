@@ -49,17 +49,17 @@ ill5 =
   toFunc p $ toArgList[[toArgList[T,F,F,F,F,F,F,F],toArgList[[[F,F,F,F,F,F,F,F],[F,F,F,F,F,F,F,F]],[]]],[toArgList[F,T,F,F,F,F,F,F],toArgList[[[F,F,F,F,F,F,F,F]],[]]]]
     where
       p = predArByteAddLine 1
-      predArByteAddLine n = 
+      predArByteAddLine n =
         predLine byteV (EnumInsn n (Arith arByteAdd))
--- output: True  
+-- output: True
 
 ill6 =
   toFunc p $ toArgList[[toArgList[T,F,F,F,F,F,F,F],toArgList[[[F,F,F,F,F,F,F,F]],[]]],[toArgList[F,T,F,F,F,F,F,F],toArgList[[[T,F,T,F,F,F,F,F],[F,F,F,F,F,F,F,F]],[]]]]
     where
       p = predArBytePushLine 1 5
-      predArBytePushLine n v = 
+      predArBytePushLine n v =
         predLine byteV (EnumInsn n (Arith $ arBytePush v))
--- output: True  
+-- output: True
 
 ill7 = do
   putStrLn $ show $ incrementer "var"
@@ -82,6 +82,14 @@ ill10 =
   
 ill11 =
   printDotFile "simpleProgram1.dot" $ defaultVis $ toGraph $ bddBox $ putBDD (progToBDD simpleProgram1) emptyBox
+
+predTestExists =
+  predExists 2 $ PredAll 3
+
+ill12 =
+  (toFunc predTestExists $ toArgList [T], toFunc predTestExists $ toArgList [F])
+-- output: (True, False)
+
 
 data B = T | F
 instance Binarizable B where
