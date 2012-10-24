@@ -86,11 +86,28 @@ ill11 =
 predTestExists =
   predExists 2 $ PredAll 3
 
+predTestExistsEq =
+  predExists 2 $ eq [2,0] [3,0]
+
 ill12 =
   (toFunc predTestExists $ toArgList [T], toFunc predTestExists $ toArgList [F])
 -- output: (True, False)
 
+sampleEq2 = BDDeq [0,0] [1,0] BDDTrue BDDFalse
+openedSampleEq2 =
+  op sampleEq2
+    where 
+      op (BDDeq i1 j1 a1 b1) = BDDeq
+        (passInto i1)
+        (passInto j1)
+        (BDDeq (nipOne i1) (nipOne j1) a1 b1)
+        b1
 
+ill13 = do
+  printDotFile "sampleEq2.dot" $ defaultVis $ toGraph $ bddBox $ putBDD sampleEq2 emptyBox
+  printDotFile "openedSampleEq2.dot" $ defaultVis $ toGraph $ bddBox $ putBDD openedSampleEq2 emptyBox
+  
+  
 data B = T | F
 instance Binarizable B where
   toArgList T = toArgList True

@@ -131,12 +131,12 @@ dotParams = nonClusteredParams {
   fmtEdge =
     \(node1, node2, b) -> 
       if b then
-        [Style [SItem Dotted []], Color	[X11Color Blue]]
+        [Color [X11Color Red]]
       else
-        [Style [SItem Bold []], Color [X11Color Red]],
+        [Style [SItem Dashed []], Color	[X11Color Blue]],
   fmtNode =
     \(node, t) ->
-      [XLabel $ StrLabel $ Lazy.pack $ showBDDNode t]
+      [Label $ StrLabel $ Lazy.pack $ showBDDNode t]
 }
 
 defaultVis :: (Graph.Graph gr) => gr BDDNodeLabel BDDEdgeLabel -> DotGraph Graph.Node

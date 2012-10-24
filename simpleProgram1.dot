@@ -1,100 +1,100 @@
 digraph {
-    1 [xlabel=F];
-    2 [xlabel=T];
-    3 [xlabel="[0,1,1]=[1,1,0]"];
-    4 [xlabel="[1,0,2]"];
-    5 [xlabel="[0,0,2]"];
-    6 [xlabel="[1,0,1]"];
-    7 [xlabel="[0,1,0]=[1,1,1]"];
-    8 [xlabel="[1,1,0,0]"];
-    9 [xlabel="[1,0,2]"];
-    10 [xlabel="[0,0,2]"];
-    11 [xlabel="[1,0,1]"];
-    12 [xlabel="[0,0,1]"];
-    13 [xlabel="[1,0,0]"];
-    14 [xlabel="[0,1,2]=[1,1,1]"];
-    15 [xlabel="[1,1,0,0]"];
-    16 [xlabel="[0,1,1,0]"];
-    17 [xlabel="[1,1,0,0]"];
-    18 [xlabel="[0,1,1,0]"];
-    19 [xlabel="[0,1,0,0]"];
-    20 [xlabel="[1,0,2]"];
-    21 [xlabel="[0,0,2]"];
-    22 [xlabel="[1,0,1]"];
-    23 [xlabel="[1,0,1]"];
-    24 [xlabel="[0,0,1]"];
-    25 [xlabel="[1,0,0]"];
-    26 [xlabel="[0,0,0]"];
-    3 -> 1 [style=bold,color=red];
-    3 -> 2 [style=dotted
+    1 [label=F];
+    2 [label=T];
+    3 [label="[0,1,1]=[1,1,0]"];
+    4 [label="[1,0,2]"];
+    5 [label="[0,0,2]"];
+    6 [label="[1,0,1]"];
+    7 [label="[0,1,0]=[1,1,1]"];
+    8 [label="[1,1,0,0]"];
+    9 [label="[1,0,2]"];
+    10 [label="[0,0,2]"];
+    11 [label="[1,0,1]"];
+    12 [label="[0,0,1]"];
+    13 [label="[1,0,0]"];
+    14 [label="[0,1,2]=[1,1,1]"];
+    15 [label="[1,1,0,0]"];
+    16 [label="[0,1,1,0]"];
+    17 [label="[1,1,0,0]"];
+    18 [label="[0,1,1,0]"];
+    19 [label="[0,1,0,0]"];
+    20 [label="[1,0,2]"];
+    21 [label="[0,0,2]"];
+    22 [label="[1,0,1]"];
+    23 [label="[1,0,1]"];
+    24 [label="[0,0,1]"];
+    25 [label="[1,0,0]"];
+    26 [label="[0,0,0]"];
+    3 -> 1 [style=dashed
            ,color=blue];
-    4 -> 3 [style=dotted
+    3 -> 2 [color=red];
+    4 -> 3 [color=red];
+    4 -> 1 [style=dashed
            ,color=blue];
-    4 -> 1 [style=bold,color=red];
-    5 -> 4 [style=bold,color=red];
-    5 -> 1 [style=dotted
+    5 -> 4 [style=dashed
            ,color=blue];
-    6 -> 5 [style=bold,color=red];
-    6 -> 1 [style=dotted
+    5 -> 1 [color=red];
+    6 -> 5 [style=dashed
            ,color=blue];
-    7 -> 1 [style=bold,color=red];
-    7 -> 2 [style=dotted
+    6 -> 1 [color=red];
+    7 -> 1 [style=dashed
            ,color=blue];
-    8 -> 7 [style=dotted
+    7 -> 2 [color=red];
+    8 -> 7 [color=red];
+    8 -> 1 [style=dashed
            ,color=blue];
-    8 -> 1 [style=bold,color=red];
-    9 -> 8 [style=bold,color=red];
-    9 -> 1 [style=dotted
+    9 -> 8 [style=dashed
            ,color=blue];
-    10 -> 9 [style=bold,color=red];
-    10 -> 1 [style=dotted
+    9 -> 1 [color=red];
+    10 -> 9 [style=dashed
             ,color=blue];
-    11 -> 10 [style=dotted
+    10 -> 1 [color=red];
+    11 -> 10 [color=red];
+    11 -> 1 [style=dashed
+            ,color=blue];
+    12 -> 6 [color=red];
+    12 -> 11 [style=dashed
              ,color=blue];
-    11 -> 1 [style=bold,color=red];
-    12 -> 6 [style=dotted
-            ,color=blue];
-    12 -> 11 [style=bold,color=red];
-    13 -> 12 [style=bold,color=red];
-    13 -> 1 [style=dotted
-            ,color=blue];
-    14 -> 1 [style=bold,color=red];
-    14 -> 2 [style=dotted
-            ,color=blue];
-    15 -> 14 [style=dotted
+    13 -> 12 [style=dashed
              ,color=blue];
-    15 -> 1 [style=bold,color=red];
-    16 -> 15 [style=bold,color=red];
-    16 -> 1 [style=dotted
+    13 -> 1 [color=red];
+    14 -> 1 [style=dashed
             ,color=blue];
-    17 -> 14 [style=bold,color=red];
-    17 -> 1 [style=dotted
+    14 -> 2 [color=red];
+    15 -> 14 [color=red];
+    15 -> 1 [style=dashed
             ,color=blue];
-    18 -> 15 [style=dotted
+    16 -> 15 [style=dashed
              ,color=blue];
-    18 -> 17 [style=bold,color=red];
-    19 -> 16 [style=dotted
+    16 -> 1 [color=red];
+    17 -> 14 [style=dashed
              ,color=blue];
-    19 -> 18 [style=bold,color=red];
-    20 -> 19 [style=bold,color=red];
-    20 -> 1 [style=dotted
+    17 -> 1 [color=red];
+    18 -> 15 [color=red];
+    18 -> 17 [style=dashed
+             ,color=blue];
+    19 -> 16 [color=red];
+    19 -> 18 [style=dashed
+             ,color=blue];
+    20 -> 19 [style=dashed
+             ,color=blue];
+    20 -> 1 [color=red];
+    21 -> 20 [style=dashed
+             ,color=blue];
+    21 -> 1 [color=red];
+    22 -> 21 [color=red];
+    22 -> 1 [style=dashed
             ,color=blue];
-    21 -> 20 [style=bold,color=red];
-    21 -> 1 [style=dotted
+    23 -> 10 [style=dashed
+             ,color=blue];
+    23 -> 1 [color=red];
+    24 -> 22 [color=red];
+    24 -> 23 [style=dashed
+             ,color=blue];
+    25 -> 24 [color=red];
+    25 -> 1 [style=dashed
             ,color=blue];
-    22 -> 21 [style=dotted
+    26 -> 13 [color=red];
+    26 -> 25 [style=dashed
              ,color=blue];
-    22 -> 1 [style=bold,color=red];
-    23 -> 10 [style=bold,color=red];
-    23 -> 1 [style=dotted
-            ,color=blue];
-    24 -> 22 [style=dotted
-             ,color=blue];
-    24 -> 23 [style=bold,color=red];
-    25 -> 24 [style=dotted
-             ,color=blue];
-    25 -> 1 [style=bold,color=red];
-    26 -> 13 [style=dotted
-             ,color=blue];
-    26 -> 25 [style=bold,color=red];
 }

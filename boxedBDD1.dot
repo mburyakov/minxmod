@@ -1,12 +1,12 @@
 digraph {
-    1 [xlabel=T];
-    2 [xlabel=F];
-    3 [xlabel="[1]=[2]"];
-    4 [xlabel="[0]"];
-    3 -> 1 [style=bold,color=red];
-    3 -> 2 [style=dotted
+    1 [label=T];
+    2 [label=F];
+    3 [label="[1]=[2]"];
+    4 [label="[0]"];
+    3 -> 1 [style=dashed
            ,color=blue];
-    4 -> 3 [style=bold,color=red];
-    4 -> 1 [style=dotted
+    3 -> 2 [color=red];
+    4 -> 3 [style=dashed
            ,color=blue];
+    4 -> 1 [color=red];
 }
