@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module BDD where
 
 import Predicates
@@ -6,7 +8,8 @@ import qualified Data.Map as Map
 import Data.Graph.Inductive.Tree
 import qualified Data.Graph.Inductive.Graph as Graph
 import Data.GraphViz
-
+import Data.GraphViz.Attributes.Complete
+import qualified Data.Text.Lazy as Lazy
 
 type BDDIndex = Int
 
@@ -37,6 +40,8 @@ bddNodeLabel (NodeIf i ia ib) =
   LNodeIf i
 bddNodeLabel (NodeEq i j ia ib) =
   LNodeEq i j
+
+
 
 type BDDEdgeLabel = Bool
 
@@ -117,7 +122,22 @@ toGraph box =
     where
       g1 = Map.foldrWithKey (\k v g -> Graph.insNode (k,(bddNodeLabel v)) g) Graph.empty box
 
-dotParams = nonClusteredParams
+showBDDNode LNodeTrue = "T"
+showBDDNode LNodeFalse = "F"
+showBDDNode (LNodeIf i) = show i
+showBDDNode (LNodeEq i j) = show i ++ "=" ++ show j
 
-defaultVis :: (Graph.Graph gr) => gr nl el -> DotGraph Graph.Node
+dotParams = nonClusteredParams {
+  fmtEdge =
+    \(node1, node2, b) -> 
+      if b then
+        [Style [SItem Dotted []], Color	[X11Color Blue]]
+      else
+        [Style [SItem Bold []], Color [X11Color Red]],
+  fmtNode =
+    \(node, t) ->
+      [XLabel $ StrLabel $ Lazy.pack $ showBDDNode t]
+}
+
+defaultVis :: (Graph.Graph gr) => gr BDDNodeLabel BDDEdgeLabel -> DotGraph Graph.Node
 defaultVis = graphToDot dotParams

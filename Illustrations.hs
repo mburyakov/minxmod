@@ -8,11 +8,15 @@ import qualified Data.Map as Map
 import Data.Graph.Inductive.Tree
 import qualified Data.Graph.Inductive.Graph as Graph
 import Data.GraphViz
+import Data.GraphViz.Attributes.Complete
 import Data.Boolean
 import ArgTree
 import Checker
 import Symbolic
 import Main
+import Data.Text.Encoding
+import qualified Data.Text.Lazy as Lazy
+import qualified Data.ByteString as ByteString
 
 
 ill1 =
@@ -70,8 +74,14 @@ boxedBDD1 =
 ill9 =
   getBDD boxedBDD1
 
+printDotFile fileName dot =
+  ByteString.writeFile fileName $ encodeUtf8 $ Lazy.toStrict $ printDotGraph dot
+
 ill10 =
-  printDotGraph $ defaultVis $ toGraph $ bddBox boxedBDD1
+  printDotFile "boxedBDD1.dot" $ defaultVis $ toGraph $ bddBox boxedBDD1
+  
+ill11 =
+  printDotFile "simpleProgram1.dot" $ defaultVis $ toGraph $ bddBox $ putBDD (progToBDD simpleProgram1) emptyBox
 
 data B = T | F
 instance Binarizable B where
