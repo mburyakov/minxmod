@@ -7,6 +7,10 @@ import Data.Boolean
 import ArgTree
 import Debug.Trace
 
+trace' x = trace ("trace' :'" ++ show x ++ "' ++ \n") x
+trace'' x y = trace ("trace' :''" ++ show x ++ "' ++ \n") y
+error' x = error $ show x
+
 data Predicate =
     PredArg   ArgIndex
   | PredNeg       (Predicate)
@@ -14,7 +18,7 @@ data Predicate =
   | PredPerm      (Permutation Bool) (Predicate)
   | PredAll   Int
   | PredAny   Int
-  | PredExists Int Predicate
+  | PredExists ArgIndex Predicate
   | PredBDD   BDD
   deriving Show
 
@@ -64,13 +68,13 @@ instance ToFuncable Predicate where
   toFunc (PredPerm p a)  x = toFunc a $ toPerm p x
   toFunc (PredAll n) (ArgList l) = foldl (&&*) true  $ map argArg (take' n l)
   toFunc (PredAny n) (ArgList l) = foldl (||*) false $ map argArg (take' n l)
-  toFunc (PredExists 0 a) (ArgList l) =
-    toFunc a (ArgList l)
-  toFunc (PredExists n a) (ArgList l) =
-      toFunc rec (ArgList $ ArgArg True:l)
-   || toFunc rec (ArgList $ ArgArg False:l)
-      where
-        rec = PredPerm (PermPerm $ ArgArg[-1]) $ PredExists (n-1) a
+  --toFunc (PredExists 0 a) (ArgList l) =
+  --  toFunc a (ArgList l)
+  --toFunc (PredExists n a) (ArgList l) =
+  --    toFunc rec (ArgList $ ArgArg True:l)
+  -- || toFunc rec (ArgList $ ArgArg False:l)
+  --    where
+  --      rec = PredPerm (PermPerm $ ArgArg[-1]) $ PredExists (n-1) a
   toFunc t1 t2 = error (show t1 ++ show t2)
 
 instance ToFuncable BDD where  
@@ -116,7 +120,7 @@ permOrd perm ord =
 
 fixReduce o b = BDDforceOrd o $ reducePred o b
 
-reducePred' o x = trace (show x) $ reducePred o x
+reducePred' o x = trace'' x $ reducePred o x
 --reducePred' o x = reducePred o x
 
 -- if using BDDv or BDDeq, variable order must correspond
@@ -145,7 +149,7 @@ reducePred o (PredOr t1@(PredBDD (BDDeq i1 j1 a1 b1)) t2@(PredBDD (BDDv i2 a2 b2
   then
     reducePred' o (PredOr lhs' t2)
   else
-   case (argCompare o i1 i2, argCompare o j1 i2) of
+   case trace' $ (argCompare o i1 i2, argCompare o j1 i2) of
     (EQ, _) ->
       reducePred' o (PredOr lhs t2)
     (_, EQ) ->
@@ -158,11 +162,11 @@ reducePred o (PredOr t1@(PredBDD (BDDeq i1 j1 a1 b1)) t2@(PredBDD (BDDv i2 a2 b2
       then
         reducePred' o (PredOr lhs t2)
       else
-        case (argCompare o (nipInfinity i1) i2, argCompare o (nipInfinity j1) i2) of
+        case trace' $ (argCompare o (nipInfinity i1) i2, argCompare o (nipInfinity j1) i2) of
           (LT, LT) ->
             (BDDeq i1 j1 (reducePred' o (PredBDD a1||*t2)) (reducePred' o (PredBDD b1||*t2)))
           (GT, GT) ->
-            reducePred' o (PredOr lhs t2)
+            BDDeq i1 j1 (reducePred' o (PredBDD a1||*t2)) (reducePred' o (PredBDD b1||*t2))
           _ -> error "Variable order does not correspond to BDDeq container"
     (LT, GT) -> reducePred' o (PredOr lhs t2)
     (GT, LT) -> reducePred' o (PredOr lhs t2)
@@ -193,6 +197,8 @@ reducePred o (PredOr t1@(PredBDD (BDDeq i1 j1 a1 b1)) t2@(PredBDD (BDDv i2 a2 b2
               a1)
 reducePred _ (PredOr x (PredBDD (BDDforceOrd newo y))) =
   reducePred' newo (PredOr x (PredBDD y))
+reducePred o (PredOr (PredBDD (BDDeq i1 j1 a1 b1)) (PredBDD (BDDeq i2 j2 a2 b2))) =
+  undefined
 reducePred o (PredOr x y) =
   reducePred' o $ PredOr (PredBDD (reducePred' o y)) (PredBDD (reducePred' o x))
 reducePred o (PredAny n) =
@@ -223,31 +229,29 @@ reducePred o (PredPerm perm (PredBDD (BDDforceOrd newo x))) =
   reducePred' newo (PredPerm perm (PredBDD x))
 reducePred o (PredPerm perm x) =
   reducePred' o (PredPerm perm (PredBDD $ reducePred' (permOrd perm o) x))
-reducePred o (PredExists 0 (PredBDD bdd@(BDDv i a b))) =
-  bdd
-reducePred o x@(PredExists n (PredBDD bdd@(BDDv i a b))) =
-  case argCompare o [0] i of
-    LT ->
-      bdd
-    EQ ->
-      reducePred' o (PredExists (n-1) (PredOr pa pb))
-        where
-          pa = PredPerm (PermPerm $ ArgArg[-1]) (PredBDD a)
-          pb = PredPerm (PermPerm $ ArgArg[-1]) (PredBDD b)
-    GT ->
-      reducePred' o (PredBDD (BDDv i (reducePred' o (PredExists n (PredBDD a))) (reducePred' o (PredExists n (PredBDD b)))))
-reducePred o (PredExists 0 (PredBDD bdd@(BDDeq i j a b))) =
-  bdd
-reducePred o x@(PredExists n (PredBDD bdd@(BDDeq i j a b))) =
-  reducePred' o (PredExists n (PredBDD bdd &&* PredBDD fake))
-    where
-      pa = PredPerm (PermPerm $ ArgArg[-1]) (PredBDD a)
-      pb = PredPerm (PermPerm $ ArgArg[-1]) (PredBDD b)
-      fake = BDDv [0] BDDTrue BDDTrue
-reducePred o (PredExists n (PredBDD BDDTrue)) =
+reducePred o x@(PredExists t (PredBDD bdd@(BDDv i a b))) =
+  if
+    t `containsVar` i
+  then
+    reducePred' o (PredOr (PredExists t (PredBDD a)) (PredExists t (PredBDD b)))
+  else
+    reducePred' o (PredBDD (BDDv i (reducePred o $ PredExists t (PredBDD a)) (reducePred o $ PredExists t (PredBDD b))))
+reducePred o x@(PredExists t (PredBDD bdd@(BDDeq i j a b))) =
+  if
+    t `containsVar` i || t `containsVar` j
+  then
+    reducePred' o (PredOr (PredExists t (PredBDD a)) (PredExists t (PredBDD b)))
+  else
+    if 
+      i `containsVar` t || j `containsVar` t
+    then
+      undefined
+    else
+      reducePred' o (PredBDD (BDDeq i j (reducePred o $ PredExists t (PredBDD a)) (reducePred o $ PredExists t (PredBDD b))))
+reducePred o (PredExists t (PredBDD BDDTrue)) =
   BDDTrue
-reducePred o (PredExists n (PredBDD BDDFalse)) =
+reducePred o (PredExists t (PredBDD BDDFalse)) =
   BDDFalse
-reducePred o x@(PredExists n a) =
-  reducePred' o (PredExists n $ PredBDD $ reducePred' o a)
+reducePred o x@(PredExists t a) =
+  reducePred' o (PredExists t $ PredBDD $ reducePred' o a)
 --reducePred _ x = error $ show x

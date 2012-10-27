@@ -2,6 +2,8 @@
 
 module ArgTree where 
 
+import Debug.Trace
+
 data ArgTree a = ArgArg { argArg :: a } | ArgList { argList :: [ArgTree a] } deriving Eq
 
 instance Functor ArgTree where
@@ -41,6 +43,7 @@ type ArgIndex = [Int]
 
 drop' n x | length x >= n = drop n x
 take' n x | length x >= n = take n x
+--take' n x = error $ show n ++ show x
 
 argDrop ::  ArgIndex -> ArgTree a -> ArgTree a
 argDrop [0]    t@(ArgArg arg) = t
@@ -90,13 +93,24 @@ passOut list =
 contains :: ArgIndex -> ArgIndex -> Bool
 infix 7 `contains`
 b `contains` a =
-  ta == tb && hb < ha
+  ta == tb && hb <= ha
     where
-      ta = tail $ reverse a
-      tb = tail $ reverse b
-      ha = head $ reverse a
-      hb = head $ reverse b
-  
+      ta = take (length b - 1) a
+      tb = take (length b - 1) b
+      ha = a !! (length b - 1)
+      hb = b !! (length b - 1)
+
+containsVar :: ArgIndex -> ArgIndex -> Bool
+infix 7 `containsVar`
+b `containsVar` a =
+ --trace (show ta ++ show tb) $
+  ta == tb && (length a < length b || hb <= ha)
+    where
+      ta = take (length b - 1) a
+      tb = take (length b - 1) b
+      ha = a !! (length b - 1)
+      hb = b !! (length b - 1)
+
 type ArgTemplate = ArgTree ()
 
 argTemplate n = ArgList $ map ArgArg $ replicate n ()
