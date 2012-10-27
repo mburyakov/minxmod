@@ -13,6 +13,7 @@ import Data.Boolean
 import ArgTree
 import Checker
 import Symbolic
+import Symbolic.Step
 import Main
 import Data.Text.Encoding
 import qualified Data.Text.Lazy as Lazy
@@ -122,7 +123,12 @@ openedSampleEq2 =
 ill13 = do
   printDotFile "sampleEq2.dot" $ defaultVis $ toGraph $ bddBox $ putBDD sampleEq2 emptyBox
   printDotFile "openedSampleEq2.dot" $ defaultVis $ toGraph $ bddBox $ putBDD openedSampleEq2 emptyBox
-  
+
+ill14 = 
+  step start bdd
+    where
+      bdd = trace' $ progToBDD simpleProgram2
+      start = trace' $ reducePred stateOrd $ notB $ PredArg [0,0]
   
 data B = T | F
 instance Binarizable B where

@@ -128,9 +128,6 @@ simpleProgram1 =
 
 simpleProgram2 =
   compile [
-    Label "begin" $ Arith $ arBytePush 5,
-    Arith $ arBytePush 3,
-    Arith $ arByteAdd,
     Arith $ arBytePop
   ]
 

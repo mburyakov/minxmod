@@ -7,8 +7,10 @@ import Data.Boolean
 import ArgTree
 import Debug.Trace
 
+--trace' x = x
+trace'' x y = y
 trace' x = trace ("trace' :'" ++ show x ++ "' ++ \n") x
-trace'' x y = trace ("trace' :''" ++ show x ++ "' ++ \n") y
+--trace'' x y = trace ("trace' :''" ++ show x ++ "' ++ \n") y
 error' x = error $ show x
 
 data Predicate =
