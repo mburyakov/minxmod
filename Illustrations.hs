@@ -15,10 +15,13 @@ import Checker
 import Symbolic
 import Symbolic.Step
 import Main
+import Step
+import Arithmetic
 import Data.Text.Encoding
 import qualified Data.Text.Lazy as Lazy
 import qualified Data.ByteString as ByteString
-
+import Control.Monad
+import Data.List
 
 ill1 =
   reducePred' ao $ (PredBDD $ BDDeq [0,1] [1,0] BDDTrue BDDFalse)||*(PredBDD $ BDDv [0,0] BDDTrue BDDFalse)
@@ -127,9 +130,17 @@ ill13 = do
 ill14 = 
   step start bdd
     where
-      bdd = trace' $ progToBDD simpleProgram2
-      start = trace' $ reducePred stateOrd $ notB $ PredArg [0,0]
-  
+      bdd = trace' $ progToBDD simpleProgram1
+      (veprog, fun) = valueEnumerateProg simpleProgram1
+      start = trace' $ reducePred stateOrd $ defaultState fun
+
+ill15 n = 
+  fixedPoint n start bdd
+    where
+      bdd = trace' $ progToBDD simpleProgram1
+      (veprog, fun) = valueEnumerateProg simpleProgram1
+      start = trace' $ reducePred stateOrd $ defaultState fun
+
 data B = T | F
 instance Binarizable B where
   toArgList T = toArgList True

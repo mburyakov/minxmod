@@ -3,31 +3,15 @@ module Symbolic where
 import Types
 import Predicates
 import ArgTree
+import Arithmetic
 import Data.Boolean
-
-withPerm perm pred = PredPerm (PermPerm perm) pred
-
-withBefore = withFirst
-withAfter  = withSecond
-
-permFirst  = PermPerm $ ArgArg [0,0]
-permSecond = PermPerm $ ArgArg [1,0]
-
-withFirst  = PredPerm permFirst
-withSecond = PredPerm permSecond
-
-withStacks = withPerm (ArgList [ArgArg[0,1,0],ArgArg[1,1,0]])
-
-predIs [] =
-  true       
-predIs (x:xs) =
-  (if x then (PredArg [0]) else notB (PredArg [0]))
-   &&* withPerm (ArgArg[1]) (predIs xs) 
 
 data EnumInsn i = EnumInsn {
   insnNum  :: i,
   insnBody :: Insn
 }
+
+type Counter i = [(String, i)]
 
 instance Functor EnumInsn where
   fmap f (EnumInsn n b) = EnumInsn (f n) b
@@ -37,25 +21,25 @@ instance Show i => Show (EnumInsn i) where
 
 data EnumProg i = EnumProg {
   enum_prog_insns :: [EnumInsn i],
-  enum_prog_bindings :: [(String, i)]
+  enum_prog_counter :: Counter i
 } deriving Show
 
 integerEnumerateProg prog = integerEnumerateProg' 0 $ prog_insns prog 
 
 integerEnumerateProg' :: Integer -> [Insn] -> EnumProg Integer
 integerEnumerateProg' start ((Label str insn):insns) =
-  EnumProg eninsns newbindings
+  EnumProg eninsns newcounter
     where
       eninsns = enum_prog_insns others
-      newbindings = (str,start): enum_prog_bindings others
+      newcounter = (str,start): enum_prog_counter others
       others = integerEnumerateProg' start (insn:insns)
 integerEnumerateProg' start ((Block block):insns) =
   integerEnumerateProg' start (block++insns)
 integerEnumerateProg' start (insn:insns) =
-  EnumProg eninsns newbindings
+  EnumProg eninsns newcounter
     where
       eninsns = (EnumInsn start insn):enum_prog_insns others
-      newbindings = enum_prog_bindings others
+      newcounter = enum_prog_counter others
       others = integerEnumerateProg' (start+1) insns
 integerEnumerateProg' start [] =
   EnumProg [] []
@@ -68,10 +52,10 @@ valueEnumerateProg prog =
       intinsns = enum_prog_insns intprog
       num = length intinsns
       fun x = SmallBoundedValue 0 (fromIntegral num) (fromIntegral x)
-      intbindings = enum_prog_bindings intprog
+      intcounter = enum_prog_counter intprog
       valinsns = map (fmap fun) intinsns
-      valbindings = map (fmap fun) intbindings
-      valprog = EnumProg valinsns valbindings
+      valcounter = map (fmap fun) intcounter
+      valprog = EnumProg valinsns valcounter
 
 inputDepth :: Arithmetic -> Int
 inputDepth = length.fst.arithSignature
@@ -91,21 +75,16 @@ predArithStacks ar =
 predArithThread ar = 
       PredPerm (PermPerm $ ArgList [ArgArg [0,0,0], ArgArg [1,0,0]]) (predArithStacks ar)
   &&* PredPerm (PermPerm $ ArgList [ArgArg [0,1], ArgArg [1,1]]) (eq [0,0] [1,0])
-      
-predLine :: Integral s => (s -> Value) -> EnumInsn s -> Predicate
-predLine lineV (EnumInsn n (Arith ar)) =
-  withPerm (ArgArg[0,0,0]) (predIs $ valToBin (lineV un))
-    &&* withPerm (ArgArg[1,0,0]) (predIs $ valToBin (lineV (un+1)))
-      &&* withPerm (ArgList [ArgArg[0,1,0],ArgArg[1,1,0]]) (predArithThread ar)
-        where
-          un = fromIntegral n
 
+-- ord on state set
 stateOrd :: ArgOrd
 stateOrd =
   ArgOrd {
     ordShow = "stateOrd",
     argCompare = compare
   }
+
+lineOrdPermute n i = [i !! 1] ++ [(i !! 2) + n] ++ (drop 3 i) ++ [i !! 0]
 
 lineOrd :: Insn -> ArgOrd
 lineOrd (Arith ar) =
@@ -118,13 +97,14 @@ lineOrd (Arith ar) =
       (1, 1) ->
         argCompare (permOrd permSecond stateOrd) x y
       (1, 0) ->
-        argCompare stateOrd (permute (inputDepth ar) x) (permute (outputDepth ar) y)
+        argCompare stateOrd (lineOrdPermute (inputDepth ar) x) (lineOrdPermute (outputDepth ar) y)
       (0, 1) ->
-        argCompare stateOrd (permute (outputDepth ar) x) (permute (inputDepth ar) y)
-  } 
-    where
-      permute n i = [i !! 1] ++ [(i !! 2) + n] ++ (drop 3 i) ++ [i !! 0]
+        argCompare stateOrd (lineOrdPermute (outputDepth ar) x) (lineOrdPermute (inputDepth ar) y)
+  }
+lineOrd (Jmp str) =
+  lineOrd (Arith arNop) 
 
+--globalOrd on Kripke structure
 globalOrd =
   ArgOrd {
     ordShow = "globalOrd",
@@ -134,24 +114,27 @@ globalOrd =
     where
       permute i = (drop 1 i) ++ [i !! 0]
 
-bddLine :: Integral s => (s -> Value) -> EnumInsn s -> Predicate
-bddLine lineV (EnumInsn n insn@(Arith ar)) =
+bddLine :: Integral s => (s -> Value) -> Counter Value -> EnumInsn s -> Predicate
+bddLine lineV c (EnumInsn n insn@(Arith ar)) =
   withPerm (ArgArg[0,0,0]) (predIs $ valToBin (lineV un))
     &&* withPerm (ArgArg[1,0,0]) (predIs $ valToBin (lineV (un+1)))
       &&* (PredBDD $ fixReduce (lineOrd insn) $ withStacks (predArithStacks ar))
         where
           un = fromIntegral n
-
-progToPred prog =
-  foldl (||*) (false) preds
-    where
-      (veprog, valfun) = valueEnumerateProg prog
-      veinsns = map (fmap sbValue) $ enum_prog_insns veprog
-      preds = map (predLine valfun) veinsns
+bddLine lineV c (EnumInsn n insn@(Jmp str)) =
+  withPerm (ArgArg[0,0,0]) (predIs $ valToBin (lineV un))
+    &&* withPerm (ArgArg[1,0,0]) (predIs $ valToBin (lineV $ trois))
+      &&* (PredBDD $ fixReduce (lineOrd insn) $ withStacks (predArithStacks arNop))
+        where
+          un = fromIntegral n
+	  (Just deux) = lookup str c
+	  trois = (fromIntegral.sbValue) deux
 
 progToBDD prog =
   reducePred globalOrd $ foldl (||*) (false) bdds
     where
       (veprog, valfun) = valueEnumerateProg prog
       veinsns = map (fmap sbValue) $ enum_prog_insns veprog
-      bdds = map (bddLine valfun) veinsns
+      bdds = map (bddLine valfun $ enum_prog_counter veprog) veinsns
+
+

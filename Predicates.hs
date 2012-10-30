@@ -7,9 +7,9 @@ import Data.Boolean
 import ArgTree
 import Debug.Trace
 
---trace' x = x
+trace' x = x
 trace'' x y = y
-trace' x = trace ("trace' :'" ++ show x ++ "' ++ \n") x
+--trace' x = trace ("trace' :'" ++ show x ++ "' ++ \n") x
 --trace'' x y = trace ("trace' :''" ++ show x ++ "' ++ \n") y
 error' x = error $ show x
 
@@ -45,6 +45,9 @@ predExists n pred =
 predForAll n pred = 
   notB (PredExists n $ notB pred)
 
+toBool BDDTrue  = Just True
+toBool BDDFalse = Just False
+toBool _ = Nothing
 
 type instance BooleanOf Predicate = Predicate
 
@@ -174,7 +177,7 @@ reducePred o (PredOr t1@(PredBDD (BDDeq i1 j1 a1 b1)) t2@(PredBDD (BDDv i2 a2 b2
     (GT, LT) -> reducePred' o (PredOr lhs t2)
   where
     lhs =
-      trace ("ord = " ++ show o ++ " i1 = " ++ show i1 ++ " j1 = " ++ show j1 ++ " i2 = " ++ show i2) $ PredBDD $ BDDeq
+      trace'' ("ord = " ++ show o ++ " i1 = " ++ show i1 ++ " j1 = " ++ show j1 ++ " i2 = " ++ show i2) $ PredBDD $ BDDeq
         (passInto i1)
         (passInto j1)
         (BDDeq (nipOne i1) (nipOne j1) a1 b1)
