@@ -127,19 +127,24 @@ ill13 = do
   printDotFile "sampleEq2.dot" $ defaultVis $ toGraph $ bddBox $ putBDD sampleEq2 emptyBox
   printDotFile "openedSampleEq2.dot" $ defaultVis $ toGraph $ bddBox $ putBDD openedSampleEq2 emptyBox
 
-ill14 = 
-  step start bdd
+ill14 =
+  step bdd start
     where
       bdd = trace' $ progToBDD simpleProgram1
       (veprog, fun) = valueEnumerateProg simpleProgram1
       start = trace' $ reducePred stateOrd $ defaultState fun
 
-ill15 n = 
-  fixedPoint n start bdd
+ill15 =
+  printDotFile "simpleProgram1states.dot" $ defaultVis $ toGraph $ bddBox $ putBDD res emptyBox
     where
+      res = if x>0 then ans else error "Try more steps!"
+      iterations = 100
+      (ans, x) = fixedPoint iterations bdd start
       bdd = trace' $ progToBDD simpleProgram1
       (veprog, fun) = valueEnumerateProg simpleProgram1
       start = trace' $ reducePred stateOrd $ defaultState fun
+
+
 
 data B = T | F
 instance Binarizable B where

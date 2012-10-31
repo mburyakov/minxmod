@@ -10,6 +10,7 @@ import qualified Data.Graph.Inductive.Graph as Graph
 import Data.GraphViz
 import Data.GraphViz.Attributes.Complete
 import qualified Data.Text.Lazy as Lazy
+import Debug.Trace
 
 type BDDIndex = Int
 
@@ -76,14 +77,24 @@ putBDD BDDTrue box =
 putBDD BDDFalse box =
   putNode NodeFalse box
 putBDD (BDDv i a b) box =
-  putNode (NodeIf i ind1 ind2) newbox2
+  if
+    ind1 == ind2
+  then
+    b1
+  else
+    putNode (NodeIf i ind1 ind2) newbox2
      where
-       (BoxedBDD ind1 newbox1) = putBDD a box
-       (BoxedBDD ind2 newbox2) = putBDD b newbox1
+       b1@(BoxedBDD ind1 newbox1) = putBDD a box
+       b2@(BoxedBDD ind2 newbox2) = putBDD b newbox1
 putBDD (BDDeq i j a b) box =
-  putNode (NodeEq i j ind1 ind2) newbox2
+  if
+    ind1 == ind2
+  then
+    b1
+  else
+    putNode (NodeEq i j ind1 ind2) newbox2
      where
-       (BoxedBDD ind1 newbox1) = putBDD a box
+       b1@(BoxedBDD ind1 newbox1) = putBDD a box
        (BoxedBDD ind2 newbox2) = putBDD b newbox1
 
 getBDD boxedbdd = do

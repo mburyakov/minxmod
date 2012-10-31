@@ -2,13 +2,14 @@ module Symbolic.Step (ProgStates, Kripke, step, fixedPoint) where
 
 import Symbolic
 import Predicates hiding (trace', trace'')
+import BDD
 import ArgTree
 import Data.Boolean
 import Debug.Trace
 import Arithmetic
 --trace' x = x
 --trace'' x y = y
-trace' x = trace ("trace' :'" ++ show x ++ "' ++ \n") x
+--trace' x = trace ("trace' :'" ++ show x ++ "' ++ \n") x
 --trace'' x y = trace ("trace' :''" ++ show x ++ "' ++ \n") y
 --error' x = error $ show x
 
@@ -17,8 +18,8 @@ type ProgStates = BDD
 type Kripke = BDD
 
 
-step :: ProgStates -> Kripke -> ProgStates
-step st gr =
+step :: Kripke -> ProgStates -> ProgStates
+step gr st =
   reducePred stateOrd or
     where
       permSt = withFirst $ PredBDD st
@@ -27,16 +28,16 @@ step st gr =
       permEx = withParentSecond $ PredBDD $ reducePred globalOrd ex
       or = permEx ||* PredBDD st
 
-fixedPoint :: Int -> ProgStates -> Kripke -> (ProgStates, Int)
-fixedPoint 0 st _ = (st, 0)
-fixedPoint n st gr =
-  trace (show st) $ if
-    impl == Just False
+fixedPoint :: Int -> Kripke -> ProgStates -> (ProgStates, Int)
+fixedPoint 0 _ st = (st, 0)
+fixedPoint n gr st =
+  if
+    impl == Just True
   then
     (st, n)
   else
-    fixedPoint (n-1) newSt gr
-    
-    where
-      impl = toBool $ reducePred stateOrd $ notB (PredBDD st) ||* PredBDD newSt
-      newSt = step st gr
+    fixedPoint (n-1) gr newSt
+     where    
+       impl = toBool $ red $ reducePred stateOrd $ (notB (PredBDD $ newSt)) ||* (PredBDD st)
+       newSt = step gr st
+       red bdd = let Just ans = getBDD (putBDD bdd emptyBox) in ans
