@@ -30,24 +30,9 @@ templateArith ar =
     ArgArg $ map templateValueType $ snd $ arithSignature ar
   ]
 
---arBytePush val = arPush $ byteV val
+arBytePush val = arPush $ byteV val
 
---arBoolPush val = arPush $ boolV $ if val then 1 else 0
-
-arBytePush val = Arithmetic {
-  arithSignature = ([], [byteT]),
-  arithFunc = \s -> [byteV val : s],
-  arithPredicate = withPerm (ArgArg[1,0,0]) $ predIs $ valToBin $ byteV val
-}
-
-arBoolPush val = Arithmetic {
-  arithSignature = ([], [boolT]),
-  arithFunc = \s -> [toBoolValue val : s],
-  arithPredicate =
-    case val of
-      True  -> PredArg [1,0,0]
-      False -> notB $ PredArg [1,0,0]
-}
+arBoolPush val = arPush $ boolV $ if val then 1 else 0
 
 simpleProgram1 =
   compile [
