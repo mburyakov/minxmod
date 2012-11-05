@@ -64,17 +64,12 @@ outputDepth :: Arithmetic -> Int
 outputDepth = length.snd.arithSignature      
       
 -- predicate on whole input and output stacks
-predArithStacks ar = 
+predArithStacks ar =
   pred &&* (eq [0,inl] [1,outl])
     where
       pred = arithPredicate ar
       inl = inputDepth ar
       outl = outputDepth ar
-
--- predicate on whole input and output stacks and pools      
-predArithThread ar = 
-      PredPerm (PermPerm $ ArgList [ArgArg [0,0,0], ArgArg [1,0,0]]) (predArithStacks ar)
-  &&* PredPerm (PermPerm $ ArgList [ArgArg [0,1], ArgArg [1,1]]) (eq [0,0] [1,0])
 
 -- ord on state set
 stateOrd :: ArgOrd
@@ -116,14 +111,14 @@ globalOrd =
 
 bddLine :: Integral s => (s -> Value) -> Counter Value -> EnumInsn s -> Predicate
 bddLine lineV c (EnumInsn n insn@(Arith ar)) =
-  withPerm (ArgArg[0,0,0]) (predIs $ valToBin (lineV un))
-    &&* withPerm (ArgArg[1,0,0]) (predIs $ valToBin (lineV (un+1)))
+  (withFirst $ withAddressStack $ withFirst $ predIs $ valToBin (lineV un))
+    &&* (withSecond $ withAddressStack $ withFirst $ predIs $ valToBin (lineV (un+1)))
       &&* (PredBDD $ fixReduce (lineOrd insn) $ withStacks (predArithStacks ar))
         where
           un = fromIntegral n
 bddLine lineV c (EnumInsn n insn@(Jmp str)) =
-  withPerm (ArgArg[0,0,0]) (predIs $ valToBin (lineV un))
-    &&* withPerm (ArgArg[1,0,0]) (predIs $ valToBin (lineV $ trois))
+  (withFirst $ withAddressStack $ withFirst $ predIs $ valToBin (lineV un))
+    &&* (withSecond $ withAddressStack $ withFirst $ predIs $ valToBin (lineV $ trois))
       &&* (PredBDD $ fixReduce (lineOrd insn) $ withStacks (predArithStacks arNop))
         where
           un = fromIntegral n

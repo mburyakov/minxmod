@@ -22,6 +22,8 @@ withParentSecond = PredPerm permParentSecond
 
 withStacks = withPerm (ArgList [ArgArg[0,1,0],ArgArg[1,1,0]])
 
+withAddressStack = withPerm (ArgArg[0,0])
+
 predIs [] =
   true       
 predIs (x:xs) =
@@ -102,10 +104,10 @@ arByteAdd = Arithmetic {
   where
     size = binSize byteT
 
-arBytePush val = Arithmetic {
-  arithSignature = ([], [byteT]),
-  arithFunc = \s -> [byteV val : s],
-  arithPredicate = withPerm (ArgArg[1,0,0]) $ predIs $ valToBin $ byteV val
+arPush val = Arithmetic {
+  arithSignature = ([], [valType val]),
+  arithFunc = \s -> [val : s],
+  arithPredicate = withPerm (ArgArg[1,0,0]) $ predIs $ valToBin $ val
 }
 
 arPop t = Arithmetic {
@@ -135,15 +137,6 @@ arNot = Arithmetic {
   arithSignature = ([boolT], [boolT]),
   arithFunc = \s -> [toBoolValue (not $ fromBoolValue (s!!0)): tail s],
   arithPredicate = (PredArg [0,0,0]) /=* (PredArg [1,0,0])
-}
-
-arBoolPush val = Arithmetic {
-  arithSignature = ([], [boolT]),
-  arithFunc = \s -> [toBoolValue val : s],
-  arithPredicate =
-    case val of
-      True  -> PredArg [1,0,0]
-      False -> notB $ PredArg [1,0,0]
 }
 
 arNop = Arithmetic {

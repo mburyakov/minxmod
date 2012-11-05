@@ -12,6 +12,8 @@ data Insn =
   | Block [Insn]
   | Jmp String
   | JmpCond String
+  | JmpCall String
+  | JmpReturn
   | Get String
   | Set String
   | Arith Arithmetic
@@ -73,6 +75,7 @@ data ValueType =
   | BitSetType Int
   | PidType
   | ErrorType String
+    deriving Show
 
 -- value should be valid
 -- return: valid type

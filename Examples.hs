@@ -30,6 +30,25 @@ templateArith ar =
     ArgArg $ map templateValueType $ snd $ arithSignature ar
   ]
 
+--arBytePush val = arPush $ byteV val
+
+--arBoolPush val = arPush $ boolV $ if val then 1 else 0
+
+arBytePush val = Arithmetic {
+  arithSignature = ([], [byteT]),
+  arithFunc = \s -> [byteV val : s],
+  arithPredicate = withPerm (ArgArg[1,0,0]) $ predIs $ valToBin $ byteV val
+}
+
+arBoolPush val = Arithmetic {
+  arithSignature = ([], [boolT]),
+  arithFunc = \s -> [toBoolValue val : s],
+  arithPredicate =
+    case val of
+      True  -> PredArg [1,0,0]
+      False -> notB $ PredArg [1,0,0]
+}
+
 simpleProgram1 =
   compile [
     Label "begin" $ Arith $ arBoolPush False,
@@ -62,6 +81,11 @@ grayCode n =
 
 fromGrayCode l =
   binToInt $ reverse $ deXorList False $ reverse l
+
+-- predicate on whole input and output stacks and pools      
+predArithThread ar =
+      PredPerm (PermPerm $ ArgList [ArgArg [0,0,0], ArgArg [1,0,0]]) (predArithStacks ar)
+  &&* PredPerm (PermPerm $ ArgList [ArgArg [0,1], ArgArg [1,1]]) (eq [0,0] [1,0])
 
 predLine :: Integral s => (s -> Value) -> EnumInsn s -> Predicate
 predLine lineV (EnumInsn n (Arith ar)) =
