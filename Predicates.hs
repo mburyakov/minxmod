@@ -200,10 +200,35 @@ reducePred o (PredOr t1@(PredBDD (BDDeq i1 j1 a1 b1)) t2@(PredBDD (BDDv i2 a2 b2
             (BDDv (passOut i1)
               b1
               a1)
+reducePred o (PredOr t1@(PredBDD (BDDeq i1 j1 a1 b1)) t2@(PredBDD (BDDeq i2 j2 a2 b2))) =
+ BDDeq i1 j1 (reducePred' o (PredBDD a1||*t2)) (reducePred' o (PredBDD b1||*t2))
+  where
+    lhs =
+      trace'' ("ord = " ++ show o ++ " i1 = " ++ show i1 ++ " j1 = " ++ show j1 ++ " i2 = " ++ show i2) $ PredBDD $ BDDeq
+        (passInto i1)
+        (passInto j1)
+        (BDDeq (nipOne i1) (nipOne j1) a1 b1)
+        b1
+    lhs' =
+      case argCompare o i1 j1 of
+        LT ->
+          PredBDD $ BDDv (passOut i1)
+            (BDDv (passOut j1)
+              a1
+              b1)
+            (BDDv (passOut j1)
+              b1
+              a1)
+        GT ->
+          PredBDD $ BDDv (passOut j1)
+            (BDDv (passOut i1)
+              a1
+              b1)
+            (BDDv (passOut i1)
+              b1
+              a1)
 reducePred _ (PredOr x (PredBDD (BDDforceOrd newo y))) =
   reducePred' newo (PredOr x (PredBDD y))
-reducePred o (PredOr (PredBDD (BDDeq i1 j1 a1 b1)) (PredBDD (BDDeq i2 j2 a2 b2))) =
-  undefined
 reducePred o (PredOr x y) =
   reducePred' o $ PredOr (PredBDD (reducePred' o y)) (PredBDD (reducePred' o x))
 reducePred o (PredAny n) =

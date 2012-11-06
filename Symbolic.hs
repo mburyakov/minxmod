@@ -86,18 +86,79 @@ lineOrd (Arith ar) =
   ArgOrd {
     ordShow = "lineOrd",
     argCompare = \x y ->
-      case (x !! 0, y !! 0) of
-      (0, 0) ->
-        argCompare (permOrd permFirst  stateOrd) x y
-      (1, 1) ->
-        argCompare (permOrd permSecond stateOrd) x y
-      (1, 0) ->
-        argCompare stateOrd (lineOrdPermute (inputDepth ar) x) (lineOrdPermute (outputDepth ar) y)
-      (0, 1) ->
-        argCompare stateOrd (lineOrdPermute (outputDepth ar) x) (lineOrdPermute (inputDepth ar) y)
+      let
+        xp = case (x !! 0, x !! 1) of
+          (0, 1) ->
+            lineOrdPermute (outputDepth ar) x
+	  (1, 1) ->
+	    lineOrdPermute (inputDepth ar) x
+	  (_, 0) ->
+	    lineOrdPermute 0 x
+        yp = case (y !! 0, y !! 1) of
+          (0, 1) ->
+            lineOrdPermute (outputDepth ar) y
+	  (1, 1) ->
+	    lineOrdPermute (inputDepth ar) y
+	  (_, 0) ->
+	    lineOrdPermute 0 y
+      in case (x !! 0, y !! 0) of
+            (0, 0) ->
+              argCompare (permOrd permFirst  stateOrd) x y
+            (1, 1) ->
+              argCompare (permOrd permSecond stateOrd) x y
+            (1, 0) ->
+              argCompare stateOrd xp yp
+            (0, 1) ->
+              argCompare stateOrd xp yp
   }
 lineOrd (Jmp str) =
-  lineOrd (Arith arNop) 
+  ArgOrd {
+    ordShow = "lineOrd",
+    argCompare = \x y ->
+      let
+        xp =
+            lineOrdPermute 0 x
+        yp =
+            lineOrdPermute 0 y
+      in case (x !! 0, y !! 0) of
+            (0, 0) ->
+              argCompare (permOrd permFirst  stateOrd) x y
+            (1, 1) ->
+              argCompare (permOrd permSecond stateOrd) x y
+            (1, 0) ->
+              argCompare stateOrd xp yp
+            (0, 1) ->
+              argCompare stateOrd xp yp
+  }
+lineOrd (JmpCall str) =
+  ArgOrd {
+    ordShow = "lineOrd",
+    argCompare = \x y ->
+      let
+        xp = case (x !! 0, x !! 1) of
+          (_, 1) ->
+            lineOrdPermute 0 x
+	  (0, 0) ->
+	    lineOrdPermute 1 x
+	  (1, 0) ->
+	    lineOrdPermute 0 x
+        yp = case (y !! 0, y !! 1) of
+          (_, 1) ->
+            lineOrdPermute 0 y
+	  (0, 0) ->
+	    lineOrdPermute 1 y
+	  (1, 0) ->
+	    lineOrdPermute 0 y
+      in case (x !! 0, y !! 0) of
+            (0, 0) ->
+              argCompare (permOrd permFirst  stateOrd) x y
+            (1, 1) ->
+              argCompare (permOrd permSecond stateOrd) x y
+            (1, 0) ->
+              argCompare stateOrd xp yp
+            (0, 1) ->
+              argCompare stateOrd xp yp
+  }
 
 --globalOrd on Kripke structure
 globalOrd =
@@ -118,13 +179,25 @@ bddLine lineV c (EnumInsn n insn@(Arith ar)) =
           un = fromIntegral n
 bddLine lineV c (EnumInsn n insn@(Jmp str)) =
   (withFirst $ withAddressStack $ withFirst $ predIs $ valToBin (lineV un))
-    &&* (withSecond $ withAddressStack $ withFirst $ predIs $ valToBin (lineV $ trois))
+    &&* (withSecond $ withAddressStack $ withFirst $ predIs $ valToBin (lineV trois))
+    &&* (PredBDD $ fixReduce (lineOrd insn) (
+            (withAddressStacksRest $ predArithStacks arNop)
+              &&* (withStacks (predArithStacks arNop))))
+        where
+          un = fromIntegral n
+          (Just deux) = lookup str c
+          trois = (fromIntegral.sbValue) deux
+	  --addrOp = arReplace $ lineV trois
+{-bddLine lineV c (EnumInsn n insn@(JmpCall str)) =
+  (withFirst $ withAddressStack $ withFirst $ predIs $ valToBin (lineV un))
+    &&* (PredBDD $ fixReduce (lineOrd $ Arith addrOp) $ withAddressStacks $ (predArithStacks addrOp))
       &&* (PredBDD $ fixReduce (lineOrd insn) $ withStacks (predArithStacks arNop))
         where
           un = fromIntegral n
 	  (Just deux) = lookup str c
 	  trois = (fromIntegral.sbValue) deux
-
+	  addrOp = arPush $ lineV trois
+-}
 progToBDD prog =
   reducePred globalOrd $ foldl (||*) (false) bdds
     where

@@ -144,7 +144,8 @@ ill15 =
       (veprog, fun) = valueEnumerateProg simpleProgram1
       start = trace' $ reducePred stateOrd $ defaultState fun
 
-
+ill16 =
+  printDotFile "simpleProgram2.dot" $ defaultVis $ toGraph $ bddBox $ putBDD (progToBDD simpleProgram2) emptyBox
 
 data B = T | F
 instance Binarizable B where

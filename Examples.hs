@@ -42,7 +42,6 @@ simpleProgram1 =
     Arith $ arNot,
     Arith $ arNop,
     Arith $ arPop boolT
-    --Jmp "begin"
   ]
 
 defaultState lineV =
@@ -50,7 +49,8 @@ defaultState lineV =
 
 simpleProgram2 =
   compile [
-    Arith $ arPop byteT
+    Label "label" $ Arith arNop,
+    Jmp "label"
   ]
 
 xorList _ [] = []

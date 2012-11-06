@@ -24,6 +24,10 @@ withStacks = withPerm (ArgList [ArgArg[0,1,0],ArgArg[1,1,0]])
 
 withAddressStack = withPerm (ArgArg[0,0])
 
+withAddressStacks = withPerm (ArgList [ArgArg[0,0,0],ArgArg[1,0,0]])
+
+withAddressStacksRest = withPerm (ArgList [ArgArg[0,0,1],ArgArg[1,0,1]])
+
 predIs [] =
   true       
 predIs (x:xs) =
@@ -114,6 +118,12 @@ arPop t = Arithmetic {
   arithSignature = ([t], []),
   arithFunc = \s -> [tail s],
   arithPredicate = true
+}
+
+arReplace val = Arithmetic {
+  arithSignature = ([valType val], [valType val]),
+  arithFunc = \s -> [val : tail s],
+  arithPredicate = withPerm (ArgArg[1,0,0]) $ predIs $ valToBin $ val
 }
 
 boolV = SmallBoundedValue 0 1
