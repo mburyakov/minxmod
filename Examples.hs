@@ -45,7 +45,7 @@ simpleProgram1 =
   ]
 
 defaultState lineV =
-  withPerm (ArgArg[0,0]) (predIs $ valToBin (lineV 0))
+  withPerm (ArgArg[0,0,0]) (predIs $ valToBin (lineV 0))
 
 simpleProgram2 =
   compile [

@@ -174,7 +174,9 @@ bddLine :: Integral s => (s -> Value) -> Counter Value -> EnumInsn s -> Predicat
 bddLine lineV c (EnumInsn n insn@(Arith ar)) =
   (withFirst $ withAddressStack $ withFirst $ predIs $ valToBin (lineV un))
     &&* (withSecond $ withAddressStack $ withFirst $ predIs $ valToBin (lineV (un+1)))
-      &&* (PredBDD $ fixReduce (lineOrd insn) $ withStacks (predArithStacks ar))
+    &&* (PredBDD $ fixReduce (lineOrd insn) (
+            (withAddressStacksRest $ predArithStacks arNop)
+              &&* (withStacks (predArithStacks ar))))
         where
           un = fromIntegral n
 bddLine lineV c (EnumInsn n insn@(Jmp str)) =
