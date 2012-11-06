@@ -50,7 +50,7 @@ defaultState lineV =
 simpleProgram2 =
   compile [
     Label "label" $ Arith arNop,
-    Jmp "label"
+    JmpCall "label"
   ]
 
 xorList _ [] = []

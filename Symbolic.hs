@@ -189,17 +189,18 @@ bddLine lineV c (EnumInsn n insn@(Jmp str)) =
           un = fromIntegral n
           (Just deux) = lookup str c
           trois = (fromIntegral.sbValue) deux
-	  --addrOp = arReplace $ lineV trois
-{-bddLine lineV c (EnumInsn n insn@(JmpCall str)) =
+bddLine lineV c (EnumInsn n insn@(JmpCall str)) =
   (withFirst $ withAddressStack $ withFirst $ predIs $ valToBin (lineV un))
-    &&* (PredBDD $ fixReduce (lineOrd $ Arith addrOp) $ withAddressStacks $ (predArithStacks addrOp))
-      &&* (PredBDD $ fixReduce (lineOrd insn) $ withStacks (predArithStacks arNop))
+    &&* (withSecond $ withAddressStack $ withFirst $ predIs $ valToBin (lineV trois))
+    &&* (PredBDD $ fixReduce (lineOrd insn) (
+            (withAddressStacksRest $ predArithStacks $ arPush (lineV un))
+              &&* (withStacks (predArithStacks arNop))))
         where
           un = fromIntegral n
 	  (Just deux) = lookup str c
 	  trois = (fromIntegral.sbValue) deux
 	  addrOp = arPush $ lineV trois
--}
+
 progToBDD prog =
   reducePred globalOrd $ foldl (||*) (false) bdds
     where

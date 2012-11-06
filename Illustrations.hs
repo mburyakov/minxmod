@@ -18,8 +18,8 @@ import Main
 import Step
 import Arithmetic
 import Data.Text.Encoding
-import qualified Data.Text.Lazy as Lazy
-import qualified Data.ByteString as ByteString
+import qualified Data.Text.Lazy
+import qualified Data.Text.Lazy.IO
 import Control.Monad
 import Data.List
 
@@ -95,7 +95,7 @@ ill9 =
   getBDD boxedBDD1
 
 printDotFile fileName dot =
-  ByteString.writeFile fileName $ encodeUtf8 $ Lazy.toStrict $ printDotGraph dot
+  Data.Text.Lazy.IO.writeFile fileName $ printDotGraph dot
 
 ill10 =
   printDotFile "boxedBDD1.dot" $ defaultVis $ toGraph $ bddBox boxedBDD1
