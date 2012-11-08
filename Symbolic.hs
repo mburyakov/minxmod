@@ -76,7 +76,7 @@ stateOrd :: ArgOrd
 stateOrd =
   ArgOrd {
     ordShow = "stateOrd",
-    argCompare = compare
+    argCompare = \x y -> Just $ compare x y
   }
 
 lineOrdPermute n i = [i !! 1] ++ [(i !! 2) + n] ++ (drop 3 i) ++ [i !! 0]
@@ -165,7 +165,7 @@ globalOrd =
   ArgOrd {
     ordShow = "globalOrd",
     argCompare = \x y ->
-      compare (permute x) (permute y)
+      Just $ compare (permute x) (permute y)
   }
     where
       permute i = (drop 1 i) ++ [i !! 0]

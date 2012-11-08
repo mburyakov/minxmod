@@ -40,6 +40,12 @@ digraph {
     39 [label="[0,0,0,1]"];
     40 [label="[1,0,0,0]"];
     41 [label="[0,0,0,0]"];
+    42 [label="ord = lineOrd"];
+    43 [label="ord = lineOrd"];
+    44 [label="ord = lineOrd"];
+    45 [label="ord = lineOrd"];
+    46 [label="ord = lineOrd"];
+    47 [label="ord = lineOrd"];
     3 -> 1 [style=dashed
            ,color=blue];
     3 -> 2 [color=red];
@@ -157,4 +163,10 @@ digraph {
     41 -> 21 [color=red];
     41 -> 40 [style=dashed
              ,color=blue];
+    42 -> 41 [color=red];
+    43 -> 42 [color=red];
+    44 -> 43 [color=red];
+    45 -> 44 [color=red];
+    46 -> 45 [color=red];
+    47 -> 46 [color=red];
 }

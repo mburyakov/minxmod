@@ -6,6 +6,8 @@ module Predicates where
 import Data.Boolean
 import ArgTree
 import Debug.Trace
+import Data.Monoid
+import Control.Monad
 
 trace' x = x
 trace'' x y = y
@@ -47,6 +49,7 @@ predForAll n pred =
 
 toBool BDDTrue  = Just True
 toBool BDDFalse = Just False
+toBool (BDDforceOrd _ a) = toBool a
 toBool _ = Nothing
 
 type instance BooleanOf Predicate = Predicate
@@ -61,6 +64,10 @@ data Permutation a =
     PermComp (Permutation a) (Permutation a)   
   | PermPerm (ArgTree ArgIndex)
   deriving (Show, Eq)
+
+instance Monoid (Permutation a) where
+  mempty = PermPerm (ArgArg [0])
+  mappend p1 p2 = PermComp p1 p2
 
 class ToFuncable p where
   toFunc :: p -> ArgTree Bool -> Bool
@@ -107,13 +114,25 @@ toIndexFunc (PermPerm indices) x =
       (e1:rest, ArgArg left) = argSoftDrop x indices
       (e2:rleft) = reverse left
 
-
 data ArgOrd = ArgOrd {
-  argCompare :: ArgIndex -> ArgIndex -> Ordering,
+  argCompare :: ArgIndex -> ArgIndex -> Maybe Ordering,
   ordShow :: String
 }
 instance Show ArgOrd where
   show ao = ordShow ao
+
+instance Monoid ArgOrd where
+  mempty = ArgOrd {
+    ordShow = "emptyOrg",
+    argCompare = const $ const Nothing
+  }
+
+  mappend a b = ArgOrd {
+    ordShow = show a ++ "<>" ++ show b,
+    argCompare = \x y ->
+      argCompare a x y `mplus`
+      argCompare b x y
+  }
 
 permOrd :: Permutation Bool -> ArgOrd -> ArgOrd
 permOrd perm ord =
@@ -135,46 +154,49 @@ reducePred _ (PredArg i) = BDDv i BDDTrue BDDFalse
 reducePred o (PredNeg (PredBDD(BDDv i a b))) = BDDv i (reducePred' o (notB $ PredBDD a)) (reducePred' o (notB $ PredBDD b))
 reducePred _ (PredNeg (PredBDD BDDTrue))  = BDDFalse
 reducePred _ (PredNeg (PredBDD BDDFalse)) = BDDTrue
-reducePred _ (PredNeg (PredBDD (BDDforceOrd newo b))) = reducePred' newo (notB $ PredBDD b)
+reducePred o (PredNeg (PredBDD (BDDforceOrd newo b))) =
+  BDDforceOrd newo $ reducePred' reso (PredNeg $ PredBDD b)
+    where
+      reso = newo <> o
 reducePred o (PredNeg (PredBDD(BDDeq i j a b))) = BDDeq i j (reducePred' o (notB $ PredBDD a)) (reducePred' o (notB $ PredBDD b))
 reducePred o (PredNeg x) =
   reducePred' o $ PredNeg $ PredBDD $ reducePred' o x
 reducePred o (PredOr t1@(PredBDD(BDDv i1 a1 b1)) t2@(PredBDD(BDDv i2 a2 b2))) =
    case argCompare o i1 i2 of
-    EQ -> BDDv i1 (reducePred' o (PredBDD a1||*PredBDD a2)) (reducePred' o (PredBDD b1||*PredBDD b2))
-    LT -> BDDv i1 (reducePred' o (PredBDD a1||*t2)) (reducePred' o (PredBDD b1||*t2))
-    GT -> BDDv i2 (reducePred' o (PredBDD a2||*t1)) (reducePred' o (PredBDD b2||*t1))
+    Just EQ -> BDDv i1 (reducePred' o (PredBDD a1||*PredBDD a2)) (reducePred' o (PredBDD b1||*PredBDD b2))
+    Just LT -> BDDv i1 (reducePred' o (PredBDD a1||*t2)) (reducePred' o (PredBDD b1||*t2))
+    Just GT -> BDDv i2 (reducePred' o (PredBDD a2||*t1)) (reducePred' o (PredBDD b2||*t1))
 reducePred o (PredOr _ (PredBDD BDDTrue)) =
   BDDTrue
 reducePred o (PredOr t1 (PredBDD BDDFalse)) =
   reducePred' o t1
 reducePred o (PredOr t1@(PredBDD (BDDeq i1 j1 a1 b1)) t2@(PredBDD (BDDv i2 a2 b2))) =
   if
-    (argCompare o i1 (passInto i2) == EQ || argCompare o j1 (passInto i2) == EQ)
+    (argCompare o i1 (passInto i2) == Just EQ || argCompare o j1 (passInto i2) == Just EQ)
   then
     reducePred' o (PredOr lhs' t2)
   else
    case trace' $ (argCompare o i1 i2, argCompare o j1 i2) of
-    (EQ, _) ->
+    (Just EQ, _) ->
       reducePred' o (PredOr lhs t2)
-    (_, EQ) ->
+    (_, Just EQ) ->
       reducePred' o (PredOr lhs t2)
-    (GT, GT) ->
+    (Just GT, Just GT) ->
       BDDv i2 (reducePred' o (PredBDD a2||*t1)) (reducePred' o (PredBDD b2||*t1))
-    (LT, LT) ->
+    (Just LT, Just LT) ->
       if
         (i1 `contains` i2) || (j1 `contains` i2)
       then
         reducePred' o (PredOr lhs t2)
       else
         case trace' $ (argCompare o (nipInfinity i1) i2, argCompare o (nipInfinity j1) i2) of
-          (LT, LT) ->
+          (Just LT, Just LT) ->
             (BDDeq i1 j1 (reducePred' o (PredBDD a1||*t2)) (reducePred' o (PredBDD b1||*t2)))
-          (GT, GT) ->
+          (Just GT, Just GT) ->
             BDDeq i1 j1 (reducePred' o (PredBDD a1||*t2)) (reducePred' o (PredBDD b1||*t2))
           _ -> error "Variable order does not correspond to BDDeq container"
-    (LT, GT) -> reducePred' o (PredOr lhs t2)
-    (GT, LT) -> reducePred' o (PredOr lhs t2)
+    (Just LT, Just GT) -> reducePred' o (PredOr lhs t2)
+    (Just GT, Just LT) -> reducePred' o (PredOr lhs t2)
   where
     lhs =
       trace'' ("ord = " ++ show o ++ " i1 = " ++ show i1 ++ " j1 = " ++ show j1 ++ " i2 = " ++ show i2) $ PredBDD $ BDDeq
@@ -184,7 +206,7 @@ reducePred o (PredOr t1@(PredBDD (BDDeq i1 j1 a1 b1)) t2@(PredBDD (BDDv i2 a2 b2
         b1
     lhs' =
       case argCompare o i1 j1 of
-        LT ->
+        Just LT ->
           PredBDD $ BDDv (passOut i1)
             (BDDv (passOut j1)
               a1
@@ -192,7 +214,7 @@ reducePred o (PredOr t1@(PredBDD (BDDeq i1 j1 a1 b1)) t2@(PredBDD (BDDv i2 a2 b2
             (BDDv (passOut j1)
               b1
               a1)
-        GT ->
+        Just GT ->
           PredBDD $ BDDv (passOut j1)
             (BDDv (passOut i1)
               a1
@@ -202,13 +224,15 @@ reducePred o (PredOr t1@(PredBDD (BDDeq i1 j1 a1 b1)) t2@(PredBDD (BDDv i2 a2 b2
               a1)
 reducePred o (PredOr t1@(PredBDD (BDDeq i1 j1 a1 b1)) t2@(PredBDD (BDDeq i2 j2 a2 b2))) =
   case (argCompare o i1 i2, argCompare o j1 j2) of
-    (LT, LT) ->
+    (Just LT, Just LT) ->
       BDDeq i1 j1 (reducePred' o (PredBDD a1||*t2)) (reducePred' o (PredBDD b1||*t2))
-    (GT, GT) ->
+    (Just GT, Just GT) ->
       BDDeq i2 j2 (reducePred' o (PredBDD a2||*t1)) (reducePred' o (PredBDD b2||*t1))
     _ -> error "Different BDDeq should not overlap"
-reducePred _ (PredOr x (PredBDD (BDDforceOrd newo y))) =
-  reducePred' newo (PredOr x (PredBDD y))
+reducePred o (PredOr x (PredBDD (BDDforceOrd newo y))) =
+  BDDforceOrd newo $ reducePred' reso (PredOr x (PredBDD y))
+    where
+      reso = newo <> o
 reducePred o (PredOr x y) =
   reducePred' o $ PredOr (PredBDD (reducePred' o y)) (PredBDD (reducePred' o x))
 reducePred o (PredAny n) =
@@ -226,7 +250,8 @@ reducePred o (PredAll n) =
       reducePred'' prFalse o (PredAll n) =
         BDDv [0] (reducePred' o (PredPerm (PermPerm $ ArgArg [1]) (PredBDD $ reducePred'' prFalse o $ PredAll (n-1)))) prFalse
 reducePred o (PredPerm perm1 (PredPerm perm2 x)) =
-  reducePred' o (PredPerm (PermComp perm2 perm1) (PredBDD $ reducePred' (permOrd (PermComp perm2 perm1) o) x))
+  reducePred' o (PredPerm newPerm (PredBDD $ reducePred' (permOrd newPerm o) x))
+    where newPerm = perm2 <> perm1
 reducePred o (PredPerm perm (PredBDD (BDDv i a b))) =
   BDDv (toIndexFunc perm i) (reducePred' o $ PredPerm perm (PredBDD a)) (reducePred' o $ PredPerm perm (PredBDD b))
 reducePred o (PredPerm perm (PredBDD (BDDeq i j a b))) =
@@ -236,7 +261,9 @@ reducePred o (PredPerm perm (PredBDD BDDTrue)) =
 reducePred o (PredPerm perm (PredBDD BDDFalse)) =
   BDDFalse
 reducePred o (PredPerm perm (PredBDD (BDDforceOrd newo x))) =
-  reducePred' newo (PredPerm perm (PredBDD x))
+  BDDforceOrd newo $ reducePred' reso (PredPerm perm (PredBDD x))
+    where
+      reso = newo <> o
 reducePred o (PredPerm perm x) =
   reducePred' o (PredPerm perm (PredBDD $ reducePred' (permOrd perm o) x))
 reducePred o x@(PredExists t (PredBDD bdd@(BDDv i a b))) =
@@ -246,6 +273,10 @@ reducePred o x@(PredExists t (PredBDD bdd@(BDDv i a b))) =
     reducePred' o (PredOr (PredExists t (PredBDD a)) (PredExists t (PredBDD b)))
   else
     reducePred' o (PredBDD (BDDv i (reducePred o $ PredExists t (PredBDD a)) (reducePred o $ PredExists t (PredBDD b))))
+reducePred o x@(PredExists t (PredBDD bdd@(BDDforceOrd newo a))) =
+  BDDforceOrd newo $ reducePred' reso (PredExists t (PredBDD a))
+    where
+      reso = newo <> o
 reducePred o x@(PredExists t (PredBDD bdd@(BDDeq i j a b))) =
   if
     t `containsVar` i || t `containsVar` j

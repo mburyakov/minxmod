@@ -6,6 +6,8 @@ import Predicates
 import BDD
 import qualified Data.Map as Map
 import Data.Graph.Inductive.Tree
+import Data.Monoid
+import Control.Monad
 import qualified Data.Graph.Inductive.Graph as Graph
 import Data.GraphViz
 import Data.GraphViz.Attributes.Complete
@@ -38,7 +40,7 @@ ill1'' =
 --         (BDDv [0,1,0] BDDTrue BDDFalse)
   
   
-ao = ArgOrd (\x y -> compare (tail x, head x) (tail y, head y)) ""
+ao = ArgOrd (\x y -> Just $ compare (tail x, head x) (tail y, head y)) ""
 -- ao = ArgOrd (\x y -> compare (reverse x) (reverse y)) ""
 
 
@@ -128,17 +130,17 @@ ill13 = do
   printDotFile "openedSampleEq2.dot" $ defaultVis $ toGraph $ bddBox $ putBDD openedSampleEq2 emptyBox
 
 ill14 =
-  step bdd start
+  (bdd, "\n", start, "\n", step bdd start)
     where
       bdd = trace' $ progToBDD simpleProgram1
       (veprog, fun) = valueEnumerateProg simpleProgram1
       start = trace' $ reducePred stateOrd $ defaultState fun
 
-ill15 =
+ill15 n =
   printDotFile "simpleProgram1states.dot" $ defaultVis $ toGraph $ bddBox $ putBDD res emptyBox
     where
       res = if x>0 then ans else error "Try more steps!"
-      iterations = 100
+      iterations = n
       (ans, x) = fixedPoint iterations bdd start
       bdd = trace' $ progToBDD simpleProgram1
       (veprog, fun) = valueEnumerateProg simpleProgram1

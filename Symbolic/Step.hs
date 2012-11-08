@@ -9,7 +9,7 @@ import Debug.Trace
 import Arithmetic
 --trace' x = x
 --trace'' x y = y
---trace' x = trace ("trace' :'" ++ show x ++ "' ++ \n") x
+trace' x = trace ("trace' :'" ++ show x ++ "' ++ \n") x
 --trace'' x y = trace ("trace' :''" ++ show x ++ "' ++ \n") y
 --error' x = error $ show x
 
@@ -38,6 +38,6 @@ fixedPoint n gr st =
   else
     fixedPoint (n-1) gr newSt
      where    
-       impl = toBool $ red $ reducePred stateOrd $ (notB (PredBDD $ newSt)) ||* (PredBDD st)
+       impl = toBool $ trace' $ red $ reducePred stateOrd $ (notB (PredBDD $ newSt)) ||* (PredBDD st)
        newSt = step gr st
        red bdd = let Just ans = getBDD (putBDD bdd emptyBox) in ans

@@ -11,11 +11,11 @@ import Arithmetic
 arByteAddStacksOrdering = ArgOrd {
   ordShow = "arByteAddStacksOrdering",
   argCompare = \x y ->
-    case (isTail x, isTail y) of
+    Just $ case (isTail x, isTail y) of
       (False, False) -> compare (permute x) (permute y)
-      (True, False) -> GT
-      (False, True) -> LT
-      (True, True) -> compare x y
+      (True,  False) -> GT
+      (False, True)  -> LT
+      (True,  True)  -> compare x y
   }
     where
       permute l = ((tail.tail) l) ++ [l!!0, l!!1]

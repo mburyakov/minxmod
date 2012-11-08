@@ -14,12 +14,16 @@ import Debug.Trace
 
 type BDDIndex = Int
 
+instance Eq ArgOrd where
+  (==) = const $ const False
+
 data BDDNode = 
     NodeTrue
   | NodeFalse
   | NodeIf ArgIndex BDDIndex BDDIndex
   | NodeEq ArgIndex ArgIndex BDDIndex BDDIndex
-    deriving (Eq, Ord, Show)
+  | NodeForceOrd ArgOrd BDDIndex
+    deriving (Eq, Show)
 
 type BDDBox = Map.Map BDDIndex BDDNode
 
@@ -31,12 +35,15 @@ data BDDNodeLabel =
   | LNodeFalse
   | LNodeIf ArgIndex
   | LNodeEq ArgIndex ArgIndex
+  | LNodeForceOrd ArgOrd
     deriving Show
 
 bddNodeLabel NodeTrue =
   LNodeTrue
 bddNodeLabel NodeFalse =
   LNodeFalse
+bddNodeLabel (NodeForceOrd ord ia) =
+  LNodeForceOrd ord
 bddNodeLabel (NodeIf i ia ib) =
   LNodeIf i
 bddNodeLabel (NodeEq i j ia ib) =
@@ -76,6 +83,10 @@ putBDD BDDTrue box =
   putNode NodeTrue box
 putBDD BDDFalse box =
   putNode NodeFalse box
+putBDD (BDDforceOrd ord a) box =
+  putNode (NodeForceOrd ord ind1) newbox1
+    where
+      b1@(BoxedBDD ind1 newbox1) = putBDD a box
 putBDD (BDDv i a b) box =
   if
     ind1 == ind2
@@ -112,6 +123,9 @@ getBDD boxedbdd = do
       a <- getBDD $ replaceRoot ia boxedbdd
       b <- getBDD $ replaceRoot ib boxedbdd
       return $ BDDeq i j a b
+    (NodeForceOrd ord ia) -> do
+      a <- getBDD $ replaceRoot ia boxedbdd
+      return $ BDDforceOrd ord a
 
 edgeToGraph v1 v2 label g =
   Graph.insEdge (v1, v2, label) g
@@ -122,6 +136,8 @@ nodeToGraph k v g =
       g
     NodeFalse ->
       g
+    (NodeForceOrd ord ia) ->
+      edgeToGraph k ia True g
     (NodeIf i ia ib) ->
       edgeToGraph k ib False $ edgeToGraph k ia True g
     (NodeEq i j ia ib) ->
@@ -135,6 +151,7 @@ toGraph box =
 
 showBDDNode LNodeTrue = "T"
 showBDDNode LNodeFalse = "F"
+showBDDNode (LNodeForceOrd ord) = "ord = " ++ show ord
 showBDDNode (LNodeIf i) = show i
 showBDDNode (LNodeEq i j) = show i ++ "=" ++ show j
 
