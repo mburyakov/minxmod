@@ -2,7 +2,7 @@ module Illustrations where
 
 import Types
 import Examples
-import Predicates
+import Predicates hiding (trace', trace'')
 import BDD
 import qualified Data.Map as Map
 import Data.Graph.Inductive.Tree
@@ -14,7 +14,7 @@ import Data.GraphViz.Attributes.Complete
 import Data.Boolean
 import ArgTree
 import Checker
-import Symbolic
+import Symbolic hiding (trace', trace'')
 import Symbolic.Step
 import Main
 import Step
@@ -24,6 +24,13 @@ import qualified Data.Text.Lazy
 import qualified Data.Text.Lazy.IO
 import Control.Monad
 import Data.List
+import Debug.Trace
+
+trace' x = x
+trace'' x y = y
+--trace' x = trace ("trace' :'" ++ show x ++ "' ++ \n") x
+--trace'' x y = trace ("trace' :''" ++ show x ++ "' ++ \n") y
+--error' x = error $ show x
 
 ill1 =
   reducePred' ao $ (PredBDD $ BDDeq [0,1] [1,0] BDDTrue BDDFalse)||*(PredBDD $ BDDv [0,0] BDDTrue BDDFalse)
@@ -129,8 +136,10 @@ ill13 = do
   printDotFile "sampleEq2.dot" $ defaultVis $ toGraph $ bddBox $ putBDD sampleEq2 emptyBox
   printDotFile "openedSampleEq2.dot" $ defaultVis $ toGraph $ bddBox $ putBDD openedSampleEq2 emptyBox
 
+
 ill14 =
-  (bdd, "\n", start, "\n", step bdd start)
+  bdd
+  --(start, step bdd start)
     where
       bdd = trace' $ progToBDD simpleProgram1
       (veprog, fun) = valueEnumerateProg simpleProgram1

@@ -1,10 +1,18 @@
 module Symbolic where
 
 import Types
-import Predicates
+import Predicates hiding (trace', trace'')
 import ArgTree
 import Arithmetic
 import Data.Boolean
+import Debug.Trace
+
+
+--trace' x = x
+trace'' x y = y
+trace' x = trace ("trace' :'" ++ show x ++ "' ++ \n") x
+--trace'' x y = trace ("trace' :''" ++ show x ++ "' ++ \n") y
+--error' x = error $ show x
 
 data EnumInsn i = EnumInsn {
   insnNum  :: i,
@@ -174,7 +182,7 @@ bddLine :: Integral s => (s -> Value) -> Counter Value -> EnumInsn s -> Predicat
 bddLine lineV c (EnumInsn n insn@(Arith ar)) =
   (withFirst $ withAddressStack $ withFirst $ predIs $ valToBin (lineV un))
     &&* (withSecond $ withAddressStack $ withFirst $ predIs $ valToBin (lineV (un+1)))
-    &&* (PredBDD $ fixReduce (lineOrd insn) (
+    &&* (PredBDD $ trace' $ fixReduce (lineOrd insn) (
             (withAddressStacksRest $ predArithStacks arNop)
               &&* (withStacks (predArithStacks ar))))
         where

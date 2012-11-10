@@ -1,6 +1,6 @@
 module Symbolic.Step (ProgStates, Kripke, step, fixedPoint) where
 
-import Symbolic
+import Symbolic hiding (trace', trace'')
 import Predicates hiding (trace', trace'')
 import BDD
 import ArgTree
