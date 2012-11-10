@@ -22,7 +22,7 @@ data BDDNode =
   | NodeFalse
   | NodeIf ArgIndex BDDIndex BDDIndex
   | NodeEq ArgIndex ArgIndex BDDIndex BDDIndex
-  | NodeForceOrd ArgOrd BDDIndex
+  | NodeForceOrd ForceOrdUsage ArgOrd BDDIndex
     deriving (Eq, Show)
 
 type BDDBox = Map.Map BDDIndex BDDNode
@@ -35,15 +35,15 @@ data BDDNodeLabel =
   | LNodeFalse
   | LNodeIf ArgIndex
   | LNodeEq ArgIndex ArgIndex
-  | LNodeForceOrd ArgOrd
+  | LNodeForceOrd ForceOrdUsage ArgOrd
     deriving Show
 
 bddNodeLabel NodeTrue =
   LNodeTrue
 bddNodeLabel NodeFalse =
   LNodeFalse
-bddNodeLabel (NodeForceOrd ord ia) =
-  LNodeForceOrd ord
+bddNodeLabel (NodeForceOrd u ord ia) =
+  LNodeForceOrd u ord
 bddNodeLabel (NodeIf i ia ib) =
   LNodeIf i
 bddNodeLabel (NodeEq i j ia ib) =
@@ -83,8 +83,8 @@ putBDD BDDTrue box =
   putNode NodeTrue box
 putBDD BDDFalse box =
   putNode NodeFalse box
-putBDD (BDDforceOrd ord a) box =
-  putNode (NodeForceOrd ord ind1) newbox1
+putBDD (BDDforceOrd u ord a) box =
+  putNode (NodeForceOrd u ord ind1) newbox1
     where
       b1@(BoxedBDD ind1 newbox1) = putBDD a box
 putBDD (BDDv i a b) box =
@@ -123,9 +123,9 @@ getBDD boxedbdd = do
       a <- getBDD $ replaceRoot ia boxedbdd
       b <- getBDD $ replaceRoot ib boxedbdd
       return $ BDDeq i j a b
-    (NodeForceOrd ord ia) -> do
+    (NodeForceOrd u ord ia) -> do
       a <- getBDD $ replaceRoot ia boxedbdd
-      return $ BDDforceOrd ord a
+      return $ BDDforceOrd u ord a
 
 edgeToGraph v1 v2 label g =
   Graph.insEdge (v1, v2, label) g
@@ -136,7 +136,7 @@ nodeToGraph k v g =
       g
     NodeFalse ->
       g
-    (NodeForceOrd ord ia) ->
+    (NodeForceOrd u ord ia) ->
       edgeToGraph k ia True g
     (NodeIf i ia ib) ->
       edgeToGraph k ib False $ edgeToGraph k ia True g
@@ -151,7 +151,7 @@ toGraph box =
 
 showBDDNode LNodeTrue = "T"
 showBDDNode LNodeFalse = "F"
-showBDDNode (LNodeForceOrd ord) = "ord = " ++ show ord
+showBDDNode (LNodeForceOrd usage ord) = "usage = " ++ show usage ++ "\nord = " ++ show ord
 showBDDNode (LNodeIf i) = show i
 showBDDNode (LNodeEq i j) = show i ++ "=" ++ show j
 

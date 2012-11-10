@@ -26,12 +26,14 @@ data Predicate =
   | PredBDD   BDD
   deriving Show
 
+data ForceOrdUsage = Comp | Step deriving (Eq, Show)
+
 data BDD =
     BDDTrue
   | BDDFalse
   | BDDv ArgIndex (BDD) (BDD)
   | BDDeq ArgIndex ArgIndex (BDD) (BDD)
-  | BDDforceOrd ArgOrd BDD
+  | BDDforceOrd ForceOrdUsage ArgOrd BDD
   deriving Show
 
 instance Boolean Predicate where
@@ -49,7 +51,7 @@ predForAll n pred =
 
 toBool BDDTrue  = Just True
 toBool BDDFalse = Just False
-toBool (BDDforceOrd _ a) = toBool a
+toBool (BDDforceOrd _ _ a) = toBool a
 toBool _ = Nothing
 
 type instance BooleanOf Predicate = Predicate
@@ -94,7 +96,7 @@ instance ToFuncable BDD where
   toFunc (BDDeq i1 i2 a b) x = if argDrop i1 x == argDrop i2 x then toFunc a x else toFunc b x
   toFunc BDDTrue _ = True
   toFunc BDDFalse _ = False
-  toFunc (BDDforceOrd _ b) x = toFunc b x
+  toFunc (BDDforceOrd _ _ b) x = toFunc b x
 
 
 toPerm :: Permutation a -> ArgTree a -> ArgTree a
@@ -142,7 +144,18 @@ permOrd perm ord =
     ordShow = "permOrd (" ++ show perm ++ ", " ++ show ord ++ ")"
   }
 
-fixReduce o b = BDDforceOrd o $ reducePred o b
+fixReduce o b = BDDforceOrd Comp o $ reducePred o b
+
+processForces (BDDforceOrd _ ord bdd) =
+  BDDforceOrd Step ord bdd
+processForces BDDTrue =
+  BDDTrue
+processForces BDDFalse =
+  BDDFalse
+processForces (BDDv i a b) =
+  BDDv i (processForces a) (processForces b)
+processForces (BDDeq i j a b) =
+  BDDeq i j (processForces a) (processForces b)
 
 reducePred' o x = trace'' x $ reducePred o x
 --reducePred' o x = reducePred o x
@@ -154,8 +167,12 @@ reducePred _ (PredArg i) = BDDv i BDDTrue BDDFalse
 reducePred o (PredNeg (PredBDD(BDDv i a b))) = BDDv i (reducePred' o (notB $ PredBDD a)) (reducePred' o (notB $ PredBDD b))
 reducePred _ (PredNeg (PredBDD BDDTrue))  = BDDFalse
 reducePred _ (PredNeg (PredBDD BDDFalse)) = BDDTrue
-reducePred o (PredNeg (PredBDD (BDDforceOrd newo b))) =
-  BDDforceOrd newo $ reducePred' reso (PredNeg $ PredBDD b)
+reducePred o (PredNeg (PredBDD (BDDforceOrd Comp newo b))) =
+  BDDforceOrd Comp newo $ reducePred' reso (PredNeg $ PredBDD b)
+    where
+      reso = newo <> o
+reducePred o (PredNeg (PredBDD (BDDforceOrd Step newo b))) =
+  reducePred' reso (PredNeg $ PredBDD b)
     where
       reso = newo <> o
 reducePred o (PredNeg (PredBDD(BDDeq i j a b))) = BDDeq i j (reducePred' o (notB $ PredBDD a)) (reducePred' o (notB $ PredBDD b))
@@ -229,11 +246,11 @@ reducePred o (PredOr t1@(PredBDD (BDDeq i1 j1 a1 b1)) t2@(PredBDD (BDDeq i2 j2 a
     (Just GT, Just GT) ->
       BDDeq i2 j2 (reducePred' o (PredBDD a2||*t1)) (reducePred' o (PredBDD b2||*t1))
     _ -> error "Different BDDeq should not overlap"
-reducePred o (PredOr t1@(PredBDD(BDDv i1 a1 b1)) t2@(PredBDD (BDDforceOrd newo (BDDv i2 a2 b2)))) =
+reducePred o (PredOr t1@(PredBDD(BDDv i1 a1 b1)) t2@(PredBDD (BDDforceOrd Comp newo (BDDv i2 a2 b2)))) =
   case argCompare o i1 i2 of
     Just LT -> BDDv i1 (reducePred' o (PredBDD a1||*t2)) (reducePred' o (PredBDD b1||*t2))
     _ -> error "Invalid BDDforceOrd usage"
-reducePred o (PredOr t1@(PredBDD (BDDeq i1 j1 a1 b1)) t2@(PredBDD (BDDforceOrd newo (BDDv i2 a2 b2)))) =
+reducePred o (PredOr t1@(PredBDD (BDDeq i1 j1 a1 b1)) t2@(PredBDD (BDDforceOrd Comp newo (BDDv i2 a2 b2)))) =
   if
     (argCompare o i1 (passInto i2) == Just EQ || argCompare o j1 (passInto i2) == Just EQ)
   then
@@ -284,7 +301,7 @@ reducePred o (PredOr t1@(PredBDD (BDDeq i1 j1 a1 b1)) t2@(PredBDD (BDDforceOrd n
             (BDDv (passOut i1)
               b1
               a1)
-reducePred o (PredOr t1@(PredBDD (BDDforceOrd newo (BDDeq i1 j1 a1 b1))) t2@(PredBDD (BDDv i2 a2 b2))) =
+reducePred o (PredOr t1@(PredBDD (BDDforceOrd Comp newo (BDDeq i1 j1 a1 b1))) t2@(PredBDD (BDDv i2 a2 b2))) =
   if
     (argCompare o i1 (passInto i2) == Just EQ || argCompare o j1 (passInto i2) == Just EQ)
   then
@@ -294,11 +311,15 @@ reducePred o (PredOr t1@(PredBDD (BDDforceOrd newo (BDDeq i1 j1 a1 b1))) t2@(Pre
     (Just GT, Just GT) ->
       BDDv i2 (reducePred' o (PredBDD a2||*t1)) (reducePred' o (PredBDD b2||*t1))
     _ -> error "Invalid BDDforceOrd usage"
-reducePred o (PredOr t1@(PredBDD (BDDeq i1 j1 a1 b1)) t2@(PredBDD (BDDforceOrd newo (BDDeq i2 j2 a2 b2)))) =
+reducePred o (PredOr t1@(PredBDD (BDDeq i1 j1 a1 b1)) t2@(PredBDD (BDDforceOrd Comp newo (BDDeq i2 j2 a2 b2)))) =
   case (argCompare o i1 i2, argCompare o j1 j2) of
     (Just LT, Just LT) ->
       BDDeq i1 j1 (reducePred' o (PredBDD a1||*t2)) (reducePred' o (PredBDD b1||*t2))
     _ -> error "Invalid BDDforceOrd usage"
+reducePred o (PredOr x (PredBDD (BDDforceOrd Step newo y))) =
+  reducePred' reso (PredOr x (PredBDD y))
+    where
+      reso = newo <> o
 reducePred o (PredOr x y) =
   reducePred' o $ PredOr (PredBDD (reducePred' o y)) (PredBDD (reducePred' o x))
 reducePred o (PredAny n) =
@@ -326,7 +347,7 @@ reducePred o (PredPerm perm (PredBDD BDDTrue)) =
   BDDTrue
 reducePred o (PredPerm perm (PredBDD BDDFalse)) =
   BDDFalse
-reducePred o (PredPerm perm (PredBDD (BDDforceOrd newo x))) =
+reducePred o (PredPerm perm (PredBDD (BDDforceOrd _ newo x))) =
   error "not realized yet"
 reducePred o (PredPerm perm x) =
   reducePred' o (PredPerm perm (PredBDD $ reducePred' (permOrd perm o) x))
@@ -337,7 +358,7 @@ reducePred o x@(PredExists t (PredBDD bdd@(BDDv i a b))) =
     reducePred' o (PredOr (PredExists t (PredBDD a)) (PredExists t (PredBDD b)))
   else
     reducePred' o (PredBDD (BDDv i (reducePred o $ PredExists t (PredBDD a)) (reducePred o $ PredExists t (PredBDD b))))
-reducePred o x@(PredExists t (PredBDD bdd@(BDDforceOrd newo a))) =
+reducePred o x@(PredExists t (PredBDD bdd@(BDDforceOrd _ newo a))) =
   error "not realized yet"
 reducePred o x@(PredExists t (PredBDD bdd@(BDDeq i j a b))) =
   if

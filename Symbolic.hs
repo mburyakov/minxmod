@@ -210,10 +210,8 @@ bddLine lineV c (EnumInsn n insn@(JmpCall str)) =
 	  addrOp = arPush $ lineV trois
 
 progToBDD prog =
-  reducePred globalOrd $ foldl (||*) (false) bdds
+  processForces $ reducePred globalOrd $ foldl (||*) (false) bdds
     where
       (veprog, valfun) = valueEnumerateProg prog
       veinsns = map (fmap sbValue) $ enum_prog_insns veprog
       bdds = map (bddLine valfun $ enum_prog_counter veprog) veinsns
-
-

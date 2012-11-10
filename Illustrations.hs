@@ -145,11 +145,11 @@ ill14 =
       (veprog, fun) = valueEnumerateProg simpleProgram1
       start = trace' $ reducePred stateOrd $ defaultState fun
 
-ill15 n =
+ill15 =
   printDotFile "simpleProgram1states.dot" $ defaultVis $ toGraph $ bddBox $ putBDD res emptyBox
     where
       res = if x>0 then ans else error "Try more steps!"
-      iterations = n
+      iterations = 7
       (ans, x) = fixedPoint iterations bdd start
       bdd = trace' $ progToBDD simpleProgram1
       (veprog, fun) = valueEnumerateProg simpleProgram1
