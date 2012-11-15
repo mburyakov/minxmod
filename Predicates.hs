@@ -6,7 +6,7 @@ module Predicates where
 import Data.Boolean
 import ArgTree
 import DebugStub
---import Debug1
+import qualified Debug1
 import Data.Monoid
 import Control.Monad
 
@@ -162,12 +162,8 @@ reducePred _ (PredArg i) = BDDv i BDDTrue BDDFalse
 reducePred o (PredNeg (PredBDD(BDDv i a b))) = BDDv i (reducePred' o (notB $ PredBDD a)) (reducePred' o (notB $ PredBDD b))
 reducePred _ (PredNeg (PredBDD BDDTrue))  = BDDFalse
 reducePred _ (PredNeg (PredBDD BDDFalse)) = BDDTrue
-reducePred o (PredNeg (PredBDD (BDDforceOrd Comp newo b))) =
-  BDDforceOrd Comp newo $ reducePred' reso (PredNeg $ PredBDD b)
-    where
-      reso = newo <> o
-reducePred o (PredNeg (PredBDD (BDDforceOrd Step newo b))) =
-  reducePred' reso (PredNeg $ PredBDD b)
+reducePred o (PredNeg (PredBDD (BDDforceOrd t newo b))) =
+  BDDforceOrd t newo $ reducePred' reso (PredNeg $ PredBDD b)
     where
       reso = newo <> o
 reducePred o (PredNeg (PredBDD(BDDeq i j a b))) = BDDeq i j (reducePred' o (notB $ PredBDD a)) (reducePred' o (notB $ PredBDD b))
