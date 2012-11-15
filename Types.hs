@@ -13,7 +13,7 @@ data Insn =
   | Jmp String
   | JmpCond String
   | JmpCall String
-  | JmpReturn
+  | JmpRet
   | Get String
   | Set String
   | Arith Arithmetic

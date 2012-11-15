@@ -53,6 +53,19 @@ simpleProgram2 =
     JmpCall "label"
   ]
 
+simpleProgram3 =
+  compile [
+    Arith $ arPush $ toBoolValue True,
+    Arith $ arPush $ toBoolValue False,
+    --JmpCall "func",
+    --Jmp "end",
+    Label "func" $ Arith arNop,
+    Arith arNot,
+    Arith arOr,
+    --JmpRet,
+    Label "end" $ Arith arNop
+  ]
+
 xorList _ [] = []
 xorList True  (x:xs) = (not x) : xorList x xs
 xorList False (x:xs) = x : xorList x xs

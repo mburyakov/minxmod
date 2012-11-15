@@ -5,15 +5,10 @@ module Predicates where
 
 import Data.Boolean
 import ArgTree
-import Debug.Trace
+import DebugStub
+--import Debug1
 import Data.Monoid
 import Control.Monad
-
-trace' x = x
-trace'' x y = y
---trace' x = trace ("trace' :'" ++ show x ++ "' ++ \n") x
---trace'' x y = trace ("trace' :''" ++ show x ++ "' ++ \n") y
-error' x = error $ show x
 
 data Predicate =
     PredArg   ArgIndex
@@ -249,7 +244,7 @@ reducePred o (PredOr t1@(PredBDD (BDDeq i1 j1 a1 b1)) t2@(PredBDD (BDDeq i2 j2 a
 reducePred o (PredOr t1@(PredBDD(BDDv i1 a1 b1)) t2@(PredBDD (BDDforceOrd Comp newo (BDDv i2 a2 b2)))) =
   case argCompare o i1 i2 of
     Just LT -> BDDv i1 (reducePred' o (PredBDD a1||*t2)) (reducePred' o (PredBDD b1||*t2))
-    _ -> error "Invalid BDDforceOrd usage"
+    _ -> error "Invalid BDDforceOrd usage 1"
 reducePred o (PredOr t1@(PredBDD (BDDeq i1 j1 a1 b1)) t2@(PredBDD (BDDforceOrd Comp newo (BDDv i2 a2 b2)))) =
   if
     (argCompare o i1 (passInto i2) == Just EQ || argCompare o j1 (passInto i2) == Just EQ)
@@ -275,7 +270,7 @@ reducePred o (PredOr t1@(PredBDD (BDDeq i1 j1 a1 b1)) t2@(PredBDD (BDDforceOrd C
           _ -> error "Variable order does not correspond to BDDeq container"
     (Just LT, Just GT) -> reducePred' o (PredOr lhs t2)
     (Just GT, Just LT) -> reducePred' o (PredOr lhs t2)
-    _ -> error "Invalid BDDforceOrd usage"
+    _ -> error "Invalid BDDforceOrd usage 2 "
   where
     lhs =
       trace'' ("ord = " ++ show o ++ " i1 = " ++ show i1 ++ " j1 = " ++ show j1 ++ " i2 = " ++ show i2) $ PredBDD $ BDDeq
@@ -305,17 +300,17 @@ reducePred o (PredOr t1@(PredBDD (BDDforceOrd Comp newo (BDDeq i1 j1 a1 b1))) t2
   if
     (argCompare o i1 (passInto i2) == Just EQ || argCompare o j1 (passInto i2) == Just EQ)
   then
-    error "Invalid BDDforceOrd usage"
+    error "Invalid BDDforceOrd usage 3 "
   else
    case trace' $ (argCompare o i1 i2, argCompare o j1 i2) of
     (Just GT, Just GT) ->
       BDDv i2 (reducePred' o (PredBDD a2||*t1)) (reducePred' o (PredBDD b2||*t1))
-    _ -> error "Invalid BDDforceOrd usage"
+    _ -> error $ "Invalid BDDforceOrd usage 4 " ++ show t1 ++ show t2
 reducePred o (PredOr t1@(PredBDD (BDDeq i1 j1 a1 b1)) t2@(PredBDD (BDDforceOrd Comp newo (BDDeq i2 j2 a2 b2)))) =
   case (argCompare o i1 i2, argCompare o j1 j2) of
     (Just LT, Just LT) ->
       BDDeq i1 j1 (reducePred' o (PredBDD a1||*t2)) (reducePred' o (PredBDD b1||*t2))
-    _ -> error "Invalid BDDforceOrd usage"
+    _ -> error "Invalid BDDforceOrd usage 5"
 reducePred o (PredOr x (PredBDD (BDDforceOrd Step newo y))) =
   reducePred' reso (PredOr x (PredBDD y))
     where
@@ -369,7 +364,7 @@ reducePred o x@(PredExists t (PredBDD bdd@(BDDeq i j a b))) =
     if 
       i `containsVar` t || j `containsVar` t
     then
-      undefined
+      error' x
     else
       reducePred' o (PredBDD (BDDeq i j (reducePred o $ PredExists t (PredBDD a)) (reducePred o $ PredExists t (PredBDD b))))
 reducePred o (PredExists t (PredBDD BDDTrue)) =

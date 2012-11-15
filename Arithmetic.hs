@@ -4,6 +4,7 @@ import Types
 import Predicates
 import ArgTree
 import Data.Boolean
+import Data.Monoid
 
 withPerm perm pred = PredPerm (PermPerm perm) pred
 
@@ -12,8 +13,9 @@ withAfter  = withSecond
 
 permFirst  = PermPerm $ ArgArg [0,0]
 permSecond = PermPerm $ ArgArg [1,0]
-permParentFirst  = PermPerm $ ArgList [ArgArg [0], undefined]
-permParentSecond = PermPerm $ ArgList [undefined, ArgArg [0]]
+permParentFirst  = PermPerm $ ArgList [ArgArg [0]]
+--permParentSecond = PermPerm $ ArgList [error "undefined in permParentSecond", ArgArg [0]]
+permParentSecond = PermPerm (ArgArg[-1]) `mappend` permParentFirst
 
 withFirst  = PredPerm permFirst
 withSecond = PredPerm permSecond

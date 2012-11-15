@@ -1,18 +1,12 @@
 module Symbolic where
 
 import Types
-import Predicates hiding (trace', trace'')
+import Predicates
 import ArgTree
 import Arithmetic
 import Data.Boolean
-import Debug.Trace
-
-
---trace' x = x
-trace'' x y = y
-trace' x = trace ("trace' :'" ++ show x ++ "' ++ \n") x
---trace'' x y = trace ("trace' :''" ++ show x ++ "' ++ \n") y
---error' x = error $ show x
+import DebugStub hiding (assert)
+import Debug1 (assert)
 
 data EnumInsn i = EnumInsn {
   insnNum  :: i,
@@ -98,17 +92,17 @@ lineOrd (Arith ar) =
         xp = case (x !! 0, x !! 1) of
           (0, 1) ->
             lineOrdPermute (outputDepth ar) x
-	  (1, 1) ->
-	    lineOrdPermute (inputDepth ar) x
-	  (_, 0) ->
-	    lineOrdPermute 0 x
+          (1, 1) ->
+            lineOrdPermute (inputDepth ar) x
+          (_, 0) ->
+            lineOrdPermute 0 x
         yp = case (y !! 0, y !! 1) of
           (0, 1) ->
             lineOrdPermute (outputDepth ar) y
-	  (1, 1) ->
-	    lineOrdPermute (inputDepth ar) y
-	  (_, 0) ->
-	    lineOrdPermute 0 y
+          (1, 1) ->
+            lineOrdPermute (inputDepth ar) y
+          (_, 0) ->
+            lineOrdPermute 0 y
       in case (x !! 0, y !! 0) of
             (0, 0) ->
               argCompare (permOrd permFirst  stateOrd) x y
@@ -146,17 +140,46 @@ lineOrd (JmpCall str) =
         xp = case (x !! 0, x !! 1) of
           (_, 1) ->
             lineOrdPermute 0 x
-	  (0, 0) ->
-	    lineOrdPermute 1 x
-	  (1, 0) ->
-	    lineOrdPermute 0 x
+          (0, 0) ->
+            lineOrdPermute 1 x
+          (1, 0) ->
+            lineOrdPermute 0 x
         yp = case (y !! 0, y !! 1) of
           (_, 1) ->
             lineOrdPermute 0 y
-	  (0, 0) ->
-	    lineOrdPermute 1 y
-	  (1, 0) ->
-	    lineOrdPermute 0 y
+          (0, 0) ->
+            lineOrdPermute 1 y
+          (1, 0) ->
+            lineOrdPermute 0 y
+      in case (x !! 0, y !! 0) of
+            (0, 0) ->
+              argCompare (permOrd permFirst  stateOrd) x y
+            (1, 1) ->
+              argCompare (permOrd permSecond stateOrd) x y
+            (1, 0) ->
+              argCompare stateOrd xp yp
+            (0, 1) ->
+              argCompare stateOrd xp yp
+  }
+lineOrd JmpRet =
+  ArgOrd {
+    ordShow = "lineOrd",
+    argCompare = \x y ->
+      let
+        xp = case (x !! 0, x !! 1) of
+          (_, 1) ->
+            lineOrdPermute 0 x
+          (0, 0) ->
+            lineOrdPermute 0 x
+          (1, 0) ->
+            lineOrdPermute 1 x
+        yp = case (y !! 0, y !! 1) of
+          (_, 1) ->
+            lineOrdPermute 0 y
+          (0, 0) ->
+            lineOrdPermute 0 y
+          (1, 0) ->
+            lineOrdPermute 1 y
       in case (x !! 0, y !! 0) of
             (0, 0) ->
               argCompare (permOrd permFirst  stateOrd) x y
@@ -176,7 +199,7 @@ globalOrd =
       Just $ compare (permute x) (permute y)
   }
     where
-      permute i = (drop 1 i) ++ [i !! 0]
+      permute i = [i !! 1, i !! 2] ++ drop 3 i ++ [i !! 0]
 
 bddLine :: Integral s => (s -> Value) -> Counter Value -> EnumInsn s -> Predicate
 bddLine lineV c (EnumInsn n insn@(Arith ar)) =
@@ -201,13 +224,23 @@ bddLine lineV c (EnumInsn n insn@(JmpCall str)) =
   (withFirst $ withAddressStack $ withFirst $ predIs $ valToBin (lineV un))
     &&* (withSecond $ withAddressStack $ withFirst $ predIs $ valToBin (lineV trois))
     &&* (PredBDD $ fixReduce (lineOrd insn) (
-            (withAddressStacksRest $ predArithStacks $ arPush (lineV un))
+            (withAddressStacksRest $ predArithStacks $ addrOp)
               &&* (withStacks (predArithStacks arNop))))
         where
           un = fromIntegral n
-	  (Just deux) = lookup str c
-	  trois = (fromIntegral.sbValue) deux
-	  addrOp = arPush $ lineV trois
+          (Just deux) = lookup str c
+          trois = (fromIntegral.sbValue) deux
+          addrOp = arPush $ lineV un
+bddLine lineV c (EnumInsn n insn@(JmpRet)) =
+  (withFirst $ withAddressStack $ withFirst $ predIs $ valToBin (lineV un))
+   &&* (PredPerm (PermPerm$ArgList[ArgArg[0,0,1,0],ArgArg[1,0,0,0]]) (predEq size size))
+    &&* (PredBDD $ fixReduce (lineOrd insn) (
+            (withAddressStacksRest $ predArithStacks $ addrOp)
+              &&* (withStacks (predArithStacks arNop))))
+        where
+          un = fromIntegral n
+          size = binSize $ valType $ lineV undefined
+          addrOp = arPop $ valType $ lineV undefined
 
 progToBDD prog =
   processForces $ reducePred globalOrd $ foldl (||*) (false) bdds

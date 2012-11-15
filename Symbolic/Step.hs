@@ -1,17 +1,13 @@
 module Symbolic.Step (ProgStates, Kripke, step, fixedPoint) where
 
-import Symbolic hiding (trace', trace'')
-import Predicates hiding (trace', trace'')
+import Symbolic
+import Predicates
 import BDD
 import ArgTree
 import Data.Boolean
-import Debug.Trace
+import DebugStub
+--import Debug1
 import Arithmetic
---trace' x = x
---trace'' x y = y
-trace' x = trace ("trace' :'" ++ show x ++ "' ++ \n") x
---trace'' x y = trace ("trace' :''" ++ show x ++ "' ++ \n") y
---error' x = error $ show x
 
 type ProgStates = BDD
 
@@ -24,7 +20,7 @@ step gr st =
     where
       permSt = withFirst $ PredBDD st
       and = permSt &&* PredBDD gr
-      ex = predExists [0,0] and
+      ex = predExists [0,0] $ and
       permEx = withParentSecond $ PredBDD $ reducePred globalOrd ex
       or = permEx ||* PredBDD st
 
@@ -38,6 +34,6 @@ fixedPoint n gr st =
   else
     fixedPoint (n-1) gr newSt
      where    
-       impl = toBool $ trace' $ red $ reducePred stateOrd $ (notB (PredBDD $ newSt)) ||* (PredBDD st)
+       impl = toBool $ red $ reducePred stateOrd $ (notB (PredBDD $ newSt)) ||* (PredBDD st)
        newSt = step gr st
        red bdd = let Just ans = getBDD (putBDD bdd emptyBox) in ans

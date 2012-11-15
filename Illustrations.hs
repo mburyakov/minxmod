@@ -2,7 +2,7 @@ module Illustrations where
 
 import Types
 import Examples
-import Predicates hiding (trace', trace'')
+import Predicates
 import BDD
 import qualified Data.Map as Map
 import Data.Graph.Inductive.Tree
@@ -14,7 +14,7 @@ import Data.GraphViz.Attributes.Complete
 import Data.Boolean
 import ArgTree
 import Checker
-import Symbolic hiding (trace', trace'')
+import Symbolic
 import Symbolic.Step
 import Main
 import Step
@@ -24,13 +24,8 @@ import qualified Data.Text.Lazy
 import qualified Data.Text.Lazy.IO
 import Control.Monad
 import Data.List
-import Debug.Trace
-
-trace' x = x
-trace'' x y = y
---trace' x = trace ("trace' :'" ++ show x ++ "' ++ \n") x
---trace'' x y = trace ("trace' :''" ++ show x ++ "' ++ \n") y
---error' x = error $ show x
+import DebugStub hiding (assert)
+import Debug1 (assert)
 
 ill1 =
   reducePred' ao $ (PredBDD $ BDDeq [0,1] [1,0] BDDTrue BDDFalse)||*(PredBDD $ BDDv [0,0] BDDTrue BDDFalse)
@@ -108,9 +103,12 @@ printDotFile fileName dot =
 
 ill10 =
   printDotFile "boxedBDD1.dot" $ defaultVis $ toGraph $ bddBox boxedBDD1
-  
+
+printProgBDD filename prog =
+  printDotFile filename $ defaultVis $ toGraph $ bddBox $ putBDD (progToBDD prog) emptyBox
+
 ill11 =
-  printDotFile "simpleProgram1.dot" $ defaultVis $ toGraph $ bddBox $ putBDD (progToBDD simpleProgram1) emptyBox
+  printProgBDD "simpleProgram1.dot"  simpleProgram1
 
 predTestExists =
   reducePred stateOrd $ predExists [1] $ PredAll 3
@@ -145,18 +143,59 @@ ill14 =
       (veprog, fun) = valueEnumerateProg simpleProgram1
       start = trace' $ reducePred stateOrd $ defaultState fun
 
-ill15 =
-  printDotFile "simpleProgram1states.dot" $ defaultVis $ toGraph $ bddBox $ putBDD res emptyBox
+printStates fileName iterations prog = do
+  printDotFile fileName $ defaultVis $ toGraph $ bddBox $ putBDD ans emptyBox
+  if x>0 then return () else error "Try more steps!"
     where
-      res = if x>0 then ans else error "Try more steps!"
-      iterations = 7
       (ans, x) = fixedPoint iterations bdd start
-      bdd = trace' $ progToBDD simpleProgram1
+      bdd = trace' $ progToBDD prog
       (veprog, fun) = valueEnumerateProg simpleProgram1
       start = trace' $ reducePred stateOrd $ defaultState fun
 
+performSteps iterations prog = do
+  (ans, x)
+    where
+      (ans, x) = fixedPoint iterations bdd start
+      bdd = trace' $ progToBDD prog
+      (veprog, fun) = valueEnumerateProg simpleProgram1
+      start = trace' $ reducePred stateOrd $ defaultState fun
+
+ill15 =
+  printStates "simpleProgram1states.dot" 7 simpleProgram1
+
 ill16 =
-  printDotFile "simpleProgram2.dot" $ defaultVis $ toGraph $ bddBox $ putBDD (progToBDD simpleProgram2) emptyBox
+  printProgBDD "simpleProgram2.dot"  simpleProgram2
+  
+ill17 = do
+  putStrLn $ show px1
+  putStrLn ""
+  putStrLn $ show x
+  putStrLn ""
+  putStrLn $ show r
+    where
+      sp3 = progToBDD simpleProgram3
+      x0 = reducePred stateOrd $ defaultState byteV
+      x1 = step sp3 x0
+      px1 = reducePred globalOrd $ (withFirst $ PredBDD x1)
+      r = reducePred globalOrd $ (withFirst $ PredBDD x1) &&* (PredBDD x)
+      x = processForces $ reducePred (lineOrd $ Arith $ arPush $ toBoolValue False) $ (bddLine byteV [] (EnumInsn 1 (Arith $ arPush $ toBoolValue False)))
+
+
+-- ill19 should return same as ill18
+ill18 = do
+  r
+    where
+      o = lineOrd $ Arith $ arPush $ toBoolValue False
+      a = (BDDeq [0,0,1] [1,0,1] (BDDv [1,1,0,0] BDDFalse (BDDeq [0,1,0] [1,1,1] BDDTrue BDDFalse)) BDDFalse)
+      r = reducePred o $ (PredBDD a) &&* (PredBDD (BDDv [0,1,0,0] BDDTrue BDDFalse))
+
+ill19 = do
+  r
+    where
+      o = lineOrd $ Arith $ arPush $ toBoolValue False
+      a = (BDDforceOrd Step o (BDDeq [0,0,1] [1,0,1] (BDDv [1,1,0,0] BDDFalse (BDDeq [0,1,0] [1,1,1] BDDTrue BDDFalse)) BDDFalse))
+      r = reducePred globalOrd $ (PredBDD a) &&* (PredBDD (BDDv [0,1,0,0] BDDTrue BDDFalse))
+
 
 data B = T | F
 instance Binarizable B where
