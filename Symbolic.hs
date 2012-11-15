@@ -243,7 +243,7 @@ bddLine lineV c (EnumInsn n insn@(JmpRet)) =
           addrOp = arPop $ valType $ lineV undefined
 
 progToBDD prog =
-  processForces $ reducePred globalOrd $ foldl (||*) (false) bdds
+  processForces (const $ Just Step) $ reducePred globalOrd $ foldl (||*) (false) bdds
     where
       (veprog, valfun) = valueEnumerateProg prog
       veinsns = map (fmap sbValue) $ enum_prog_insns veprog

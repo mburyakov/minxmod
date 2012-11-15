@@ -20,7 +20,7 @@ step gr st =
     where
       permSt = withFirst $ PredBDD st
       and = permSt &&* PredBDD gr
-      ex = predExists [0,0] $ and
+      ex = predExists [0,0] $ PredBDD $ processForces (const Nothing) $ reducePred globalOrd $ and
       permEx = withParentSecond $ PredBDD $ reducePred globalOrd ex
       or = permEx ||* PredBDD st
 

@@ -141,16 +141,19 @@ permOrd perm ord =
 
 fixReduce o b = BDDforceOrd Comp o $ reducePred o b
 
-processForces (BDDforceOrd _ ord bdd) =
-  BDDforceOrd Step ord bdd
-processForces BDDTrue =
+processForces :: (ForceOrdUsage -> Maybe ForceOrdUsage) -> BDD -> BDD
+processForces f (BDDforceOrd t ord bdd) =
+  case f t of
+    Just newf -> BDDforceOrd newf ord bdd
+    Nothing   -> bdd
+processForces f BDDTrue =
   BDDTrue
-processForces BDDFalse =
+processForces f BDDFalse =
   BDDFalse
-processForces (BDDv i a b) =
-  BDDv i (processForces a) (processForces b)
-processForces (BDDeq i j a b) =
-  BDDeq i j (processForces a) (processForces b)
+processForces f (BDDv i a b) =
+  BDDv i (processForces f a) (processForces f b)
+processForces f (BDDeq i j a b) =
+  BDDeq i j (processForces f a) (processForces f b)
 
 reducePred' o x = trace'' x $ reducePred o x
 --reducePred' o x = reducePred o x

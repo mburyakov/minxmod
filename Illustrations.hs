@@ -178,7 +178,7 @@ ill17 = do
       x1 = step sp3 x0
       px1 = reducePred globalOrd $ (withFirst $ PredBDD x1)
       r = reducePred globalOrd $ (withFirst $ PredBDD x1) &&* (PredBDD x)
-      x = processForces $ reducePred (lineOrd $ Arith $ arPush $ toBoolValue False) $ (bddLine byteV [] (EnumInsn 1 (Arith $ arPush $ toBoolValue False)))
+      x = processForces (const $ Just Step) $ reducePred (lineOrd $ Arith $ arPush $ toBoolValue False) $ (bddLine byteV [] (EnumInsn 1 (Arith $ arPush $ toBoolValue False)))
 
 
 -- ill19 should return same as ill18
@@ -196,6 +196,11 @@ ill19 = do
       a = (BDDforceOrd Step o (BDDeq [0,0,1] [1,0,1] (BDDv [1,1,0,0] BDDFalse (BDDeq [0,1,0] [1,1,1] BDDTrue BDDFalse)) BDDFalse))
       r = reducePred globalOrd $ (PredBDD a) &&* (PredBDD (BDDv [0,1,0,0] BDDTrue BDDFalse))
 
+ill20 =
+  printProgBDD "simpleProgram3.dot"  simpleProgram3
+
+ill21 =
+  printStates "simpleProgram3states.dot" 7 simpleProgram3
 
 data B = T | F
 instance Binarizable B where
