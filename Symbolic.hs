@@ -84,9 +84,9 @@ stateOrd =
 lineOrdPermute n i = [i !! 1] ++ [(i !! 2) + n] ++ (drop 3 i) ++ [i !! 0]
 
 lineOrd :: Insn -> ArgOrd
-lineOrd (Arith ar) =
+lineOrd insn@(Arith ar) =
   ArgOrd {
-    ordShow = "lineOrd",
+    ordShow = "(lineOrd (" ++ show insn ++ "))",
     argCompare = \x y ->
       let
         xp = case (x !! 0, x !! 1) of
@@ -113,9 +113,9 @@ lineOrd (Arith ar) =
             (0, 1) ->
               argCompare stateOrd xp yp
   }
-lineOrd (Jmp str) =
+lineOrd insn@(Jmp str) =
   ArgOrd {
-    ordShow = "lineOrd",
+    ordShow = "(lineOrd (" ++ show insn ++ "))",
     argCompare = \x y ->
       let
         xp =
@@ -132,9 +132,9 @@ lineOrd (Jmp str) =
             (0, 1) ->
               argCompare stateOrd xp yp
   }
-lineOrd (JmpCall str) =
+lineOrd insn@(JmpCall str) =
   ArgOrd {
-    ordShow = "lineOrd",
+    ordShow = "(lineOrd (" ++ show insn ++ "))",
     argCompare = \x y ->
       let
         xp = case (x !! 0, x !! 1) of
@@ -161,9 +161,9 @@ lineOrd (JmpCall str) =
             (0, 1) ->
               argCompare stateOrd xp yp
   }
-lineOrd JmpRet =
+lineOrd insn@JmpRet =
   ArgOrd {
-    ordShow = "lineOrd",
+    ordShow = "(lineOrd (" ++ show insn ++ "))",
     argCompare = \x y ->
       let
         xp = case (x !! 0, x !! 1) of
@@ -199,7 +199,7 @@ globalOrd =
       Just $ compare (permute x) (permute y)
   }
     where
-      permute i = [i !! 1, i !! 2] ++ drop 3 i ++ [i !! 0]
+      permute i = (i !! 1, i !! 2, drop 3 i, i !! 0)
 
 bddLine :: Integral s => (s -> Value) -> Counter Value -> EnumInsn s -> Predicate
 bddLine lineV c (EnumInsn n insn@(Arith ar)) =

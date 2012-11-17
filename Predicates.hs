@@ -241,16 +241,18 @@ reducePred o (PredOr t1@(PredBDD (BDDeq i1 j1 a1 b1)) t2@(PredBDD (BDDeq i2 j2 a
       BDDeq i2 j2 (reducePred' o (PredBDD a2||*t1)) (reducePred' o (PredBDD b2||*t1))
     _ -> error "Different BDDeq should not overlap"
 reducePred o (PredOr t1@(PredBDD(BDDv i1 a1 b1)) t2@(PredBDD (BDDforceOrd Comp newo (BDDv i2 a2 b2)))) =
-  case argCompare o i1 i2 of
+  case argCompare reso i1 i2 of
     Just LT -> BDDv i1 (reducePred' o (PredBDD a1||*t2)) (reducePred' o (PredBDD b1||*t2))
     _ -> error "Invalid BDDforceOrd usage 1"
+    where
+      reso = newo <> o
 reducePred o (PredOr t1@(PredBDD (BDDeq i1 j1 a1 b1)) t2@(PredBDD (BDDforceOrd Comp newo (BDDv i2 a2 b2)))) =
   if
-    (argCompare o i1 (passInto i2) == Just EQ || argCompare o j1 (passInto i2) == Just EQ)
+    (argCompare reso i1 (passInto i2) == Just EQ || argCompare reso j1 (passInto i2) == Just EQ)
   then
     reducePred' o (PredOr lhs' t2)
   else
-   case trace' $ (argCompare o i1 i2, argCompare o j1 i2) of
+   case trace' $ (argCompare reso i1 i2, argCompare reso j1 i2) of
     (Just EQ, _) ->
       reducePred' o (PredOr lhs t2)
     (_, Just EQ) ->
@@ -261,7 +263,7 @@ reducePred o (PredOr t1@(PredBDD (BDDeq i1 j1 a1 b1)) t2@(PredBDD (BDDforceOrd C
       then
         reducePred' o (PredOr lhs t2)
       else
-        case trace' $ (argCompare o (nipInfinity i1) i2, argCompare o (nipInfinity j1) i2) of
+        case trace' $ (argCompare reso (nipInfinity i1) i2, argCompare reso (nipInfinity j1) i2) of
           (Just LT, Just LT) ->
             (BDDeq i1 j1 (reducePred' o (PredBDD a1||*t2)) (reducePred' o (PredBDD b1||*t2)))
           (Just GT, Just GT) ->
@@ -272,7 +274,7 @@ reducePred o (PredOr t1@(PredBDD (BDDeq i1 j1 a1 b1)) t2@(PredBDD (BDDforceOrd C
     _ -> error "Invalid BDDforceOrd usage 2 "
   where
     lhs =
-      trace'' ("ord = " ++ show o ++ " i1 = " ++ show i1 ++ " j1 = " ++ show j1 ++ " i2 = " ++ show i2) $ PredBDD $ BDDeq
+      PredBDD $ BDDeq
         (passInto i1)
         (passInto j1)
         (BDDeq (nipOne i1) (nipOne j1) a1 b1)
@@ -295,21 +297,26 @@ reducePred o (PredOr t1@(PredBDD (BDDeq i1 j1 a1 b1)) t2@(PredBDD (BDDforceOrd C
             (BDDv (passOut i1)
               b1
               a1)
+    reso = newo <> o
 reducePred o (PredOr t1@(PredBDD (BDDforceOrd Comp newo (BDDeq i1 j1 a1 b1))) t2@(PredBDD (BDDv i2 a2 b2))) =
   if
-    (argCompare o i1 (passInto i2) == Just EQ || argCompare o j1 (passInto i2) == Just EQ)
+    (argCompare reso i1 (passInto i2) == Just EQ || argCompare reso j1 (passInto i2) == Just EQ)
   then
     error "Invalid BDDforceOrd usage 3 "
   else
-   case trace' $ (argCompare o i1 i2, argCompare o j1 i2) of
+   case trace' $ (argCompare reso i1 i2, argCompare reso j1 i2) of
     (Just GT, Just GT) ->
       BDDv i2 (reducePred' o (PredBDD a2||*t1)) (reducePred' o (PredBDD b2||*t1))
     _ -> error $ "Invalid BDDforceOrd usage 4 " ++ show t1 ++ show t2
+    where
+      reso = newo <> o
 reducePred o (PredOr t1@(PredBDD (BDDeq i1 j1 a1 b1)) t2@(PredBDD (BDDforceOrd Comp newo (BDDeq i2 j2 a2 b2)))) =
-  case (argCompare o i1 i2, argCompare o j1 j2) of
+  case (argCompare reso i1 i2, argCompare reso j1 j2) of
     (Just LT, Just LT) ->
       BDDeq i1 j1 (reducePred' o (PredBDD a1||*t2)) (reducePred' o (PredBDD b1||*t2))
     _ -> error "Invalid BDDforceOrd usage 5"
+    where
+      reso = newo <> o
 reducePred o (PredOr x (PredBDD (BDDforceOrd Step newo y))) =
   reducePred' reso (PredOr x (PredBDD y))
     where

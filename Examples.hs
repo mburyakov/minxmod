@@ -50,19 +50,19 @@ defaultState lineV =
 simpleProgram2 =
   compile [
     Label "label" $ Arith arNop,
-    JmpCall "label"
+    JmpRet
   ]
 
 simpleProgram3 =
   compile [
     Arith $ arPush $ toBoolValue True,
     Arith $ arPush $ toBoolValue False,
-    --JmpCall "func",
-    --Jmp "end",
+    JmpCall "func",
+    Jmp "end",
     Label "func" $ Arith arNop,
     Arith arNot,
     Arith arOr,
-    --JmpRet,
+    JmpRet,
     Label "end" $ Arith arNop
   ]
 

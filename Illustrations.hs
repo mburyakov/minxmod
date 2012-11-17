@@ -200,7 +200,7 @@ ill20 =
   printProgBDD "simpleProgram3.dot"  simpleProgram3
 
 ill21 =
-  printStates "simpleProgram3states.dot" 7 simpleProgram3
+  printStates "simpleProgram3states.dot" 16 simpleProgram3
 
 data B = T | F
 instance Binarizable B where
