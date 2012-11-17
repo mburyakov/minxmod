@@ -26,7 +26,10 @@ data Insn =
 instance Show Insn where
   show (Label str insn) = "Label \"" ++ str ++ "\": " ++ show insn
   show (Block insns) = "{\n" ++ show insns ++ "}\n"
-  show _ = "Insn ...\n"
+  show (Jmp str) = "Jmp " ++ str
+  show (JmpCall str) = "JmpCall " ++ str
+  show JmpRet = "JmpRet"
+  show _ = "Insn ..."
 
 data Value =
     BoolValue Bool 
