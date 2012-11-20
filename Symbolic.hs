@@ -233,7 +233,7 @@ bddLine lineV c (EnumInsn n insn@(JmpCall str)) =
           addrOp = arPush $ lineV un
 bddLine lineV c (EnumInsn n insn@(JmpRet)) =
   (withFirst $ withAddressStack $ withFirst $ predIs $ valToBin (lineV un))
-   &&* (PredPerm (PermPerm$ArgList[ArgArg[0,0,1,0],ArgArg[1,0,0,0]]) (predEq size size))
+   &&* (PredPerm (PermPerm$ArgList[ArgArg[0,0,1,0],ArgArg[1,0,0,0]]) (predInc size size))
     &&* (PredBDD $ fixReduce (lineOrd insn) (
             (withAddressStacksRest $ predArithStacks $ addrOp)
               &&* (withStacks (predArithStacks arNop))))
