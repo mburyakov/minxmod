@@ -101,11 +101,14 @@ ill9 =
 printDotFile fileName dot =
   Data.Text.Lazy.IO.writeFile fileName $ printDotGraph dot
 
+printBDD filename bdd =
+  printDotFile filename $ defaultVis $ toGraph $ bddBox $ putBDD bdd emptyBox
+
 ill10 =
   printDotFile "boxedBDD1.dot" $ defaultVis $ toGraph $ bddBox boxedBDD1
 
 printProgBDD filename prog =
-  printDotFile filename $ defaultVis $ toGraph $ bddBox $ putBDD (progToBDD prog) emptyBox
+  printBDD filename $ progToBDD prog
 
 ill11 =
   printProgBDD "simpleProgram1.dot"  simpleProgram1
@@ -145,11 +148,14 @@ ill14 =
 
 printStates fileName iterations prog = do
   printDotFile fileName $ defaultVis $ toGraph $ bddBox $ putBDD ans emptyBox
-  if x>0 then return () else error "Try more steps!"
+  if x>0 then
+    putStrLn $ show (iterations-x) ++ " steps instead of " ++ show iterations ++ " performed. Fixed point found!"
+  else
+    putStrLn $ show iterations ++ " steps in not enough. Try more steps!"
     where
       (ans, x) = fixedPoint iterations bdd start
       bdd = trace' $ progToBDD prog
-      (veprog, fun) = valueEnumerateProg simpleProgram1
+      (veprog, fun) = valueEnumerateProg prog
       start = trace' $ reducePred stateOrd $ defaultState fun
 
 performSteps iterations prog = do
@@ -199,8 +205,14 @@ ill19 = do
 ill20 =
   printProgBDD "simpleProgram3.dot"  simpleProgram3
 
-ill21 =
-  printStates "simpleProgram3states.dot" 16 simpleProgram3
+ill21 = do
+  printStates "simpleProgram3states.dot" 10 simpleProgram3
+  mapM_ (\n -> printStates ("simpleProgram3states/" ++ show n ++ ".dot") n simpleProgram3) [0..10] 
+
+ill22 = do
+  printBDD "openeq1.dot" $ BDDeq [0,0] [1,1] BDDTrue BDDFalse
+  printBDD "openeq2.dot" $ BDDeq [0,0,0] [1,1,0] (BDDeq [0,1] [1,2] BDDTrue BDDFalse) BDDFalse
+  printBDD "openeq3.dot" $ BDDv [0,0] (BDDv [1,0] (BDDeq [0,1] [1,2] BDDTrue BDDFalse) BDDFalse) (BDDv [1,0] BDDFalse (BDDeq [0,1] [1,2] BDDTrue BDDFalse)) 
 
 data B = T | F
 instance Binarizable B where
