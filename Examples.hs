@@ -7,6 +7,7 @@ import Symbolic
 import Symbolic.Step
 import Data.Boolean
 import Arithmetic
+import BDD
 
 arByteAddStacksOrdering = ArgOrd {
   ordShow = "arByteAddStacksOrdering",
@@ -45,7 +46,12 @@ simpleProgram1 =
   ]
 
 defaultState lineV =
-  withPerm (ArgArg[0,0,0]) (predIs $ valToBin (lineV 0))
+  ProgStates $ reducePred stateOrd $ withPerm (ArgArg[0,0,0]) (predIs $ valToBin (lineV 0))
+
+defaultProgState prog =
+  defaultState lineV
+    where
+      (enumprog, lineV) = valueEnumerateProg prog
 
 simpleProgram2 =
   compile [
@@ -99,5 +105,9 @@ progToPred prog =
       (veprog, valfun) = valueEnumerateProg prog
       veinsns = map (fmap sbValue) $ enum_prog_insns veprog
       preds = map (predLine valfun) veinsns
-      
-      
+
+countBDDNodes bdd =
+  bddRoot $ putBDD bdd emptyBox
+
+--maxStatesNodes prog =
+  

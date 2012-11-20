@@ -1,4 +1,4 @@
-module Symbolic.Step (ProgStates, Kripke, step, fixedPoint) where
+module Symbolic.Step where
 
 import Symbolic
 import Predicates
@@ -9,31 +9,42 @@ import DebugStub
 --import Debug1
 import Arithmetic
 
-type ProgStates = BDD
+data ProgStates = ProgStates {progStatesBDD :: BDD}
+instance Eq ProgStates where
+  s1 == s2 =
+    impl == Just True
+      where    
+        impl = toBool $ red $ reducePred stateOrd $ (notB (PredBDD $ progStatesBDD s2)) ||* (PredBDD $ progStatesBDD s1)
+        red bdd = let Just ans = getBDD (putBDD bdd emptyBox) in ans
+
 
 type Kripke = BDD
 
 
 step :: Kripke -> ProgStates -> ProgStates
 step gr st =
-  reducePred stateOrd or
+  ProgStates $ reducePred stateOrd or
     where
-      permSt = withFirst $ PredBDD st
+      permSt = withFirst $ PredBDD $ progStatesBDD st
       and = permSt &&* PredBDD gr
       ex = predExists [0,0] $ PredBDD $ processForces (const Nothing) $ reducePred globalOrd $ and
       permEx = withParentSecond $ PredBDD $ reducePred globalOrd ex
-      or = permEx ||* PredBDD st
+      or = permEx ||* PredBDD (progStatesBDD st)
 
-fixedPoint :: Int -> Kripke -> ProgStates -> (ProgStates, Int)
-fixedPoint 0 _ st = (st, 0)
+stepList :: Kripke -> ProgStates -> [ProgStates] 
+stepList gr st =
+  st:rest
+    where
+      newSt = step gr st
+      rest' = stepList gr newSt
+      rest = if st==newSt then [] else rest'
+      
 fixedPoint n gr st =
   if
-    impl == Just True
+    drop n lst == []
   then
-    (st, n)
-  else
-    fixedPoint (n-1) gr newSt
-     where    
-       impl = toBool $ red $ reducePred stateOrd $ (notB (PredBDD $ newSt)) ||* (PredBDD st)
-       newSt = step gr st
-       red bdd = let Just ans = getBDD (putBDD bdd emptyBox) in ans
+    (last $ lst, n - length lst + 1)
+  else  
+    (lst !! n, 0)
+    where
+      lst = stepList gr st

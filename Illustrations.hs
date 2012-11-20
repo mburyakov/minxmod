@@ -144,10 +144,10 @@ ill14 =
     where
       bdd = trace' $ progToBDD simpleProgram1
       (veprog, fun) = valueEnumerateProg simpleProgram1
-      start = trace' $ reducePred stateOrd $ defaultState fun
+      start = trace' $ defaultState fun
 
 printStates fileName iterations prog = do
-  printDotFile fileName $ defaultVis $ toGraph $ bddBox $ putBDD ans emptyBox
+  printBDD fileName $ progStatesBDD ans
   if x>0 then
     putStrLn $ show (iterations-x) ++ " steps instead of " ++ show iterations ++ " performed. Fixed point found!"
   else
@@ -156,16 +156,16 @@ printStates fileName iterations prog = do
       (ans, x) = fixedPoint iterations bdd start
       bdd = trace' $ progToBDD prog
       (veprog, fun) = valueEnumerateProg prog
-      start = trace' $ reducePred stateOrd $ defaultState fun
+      start = trace' $ defaultState fun
 
-performSteps iterations prog = do
+{-performSteps iterations prog = do
   (ans, x)
     where
       (ans, x) = fixedPoint iterations bdd start
       bdd = trace' $ progToBDD prog
       (veprog, fun) = valueEnumerateProg simpleProgram1
       start = trace' $ reducePred stateOrd $ defaultState fun
-
+-}
 ill15 =
   printStates "simpleProgram1states.dot" 7 simpleProgram1
 
@@ -180,10 +180,10 @@ ill17 = do
   putStrLn $ show r
     where
       sp3 = progToBDD simpleProgram3
-      x0 = reducePred stateOrd $ defaultState byteV
+      x0 = defaultState byteV
       x1 = step sp3 x0
-      px1 = reducePred globalOrd $ (withFirst $ PredBDD x1)
-      r = reducePred globalOrd $ (withFirst $ PredBDD x1) &&* (PredBDD x)
+      px1 = reducePred globalOrd $ (withFirst $ PredBDD $ progStatesBDD x1)
+      r = reducePred globalOrd $ (withFirst $ PredBDD $ progStatesBDD x1) &&* (PredBDD x)
       x = processForces (const $ Just Step) $ reducePred (lineOrd $ Arith $ arPush $ toBoolValue False) $ (bddLine byteV [] (EnumInsn 1 (Arith $ arPush $ toBoolValue False)))
 
 
@@ -207,7 +207,10 @@ ill20 =
 
 ill21 = do
   printStates "simpleProgram3states.dot" 10 simpleProgram3
-  mapM_ (\n -> printStates ("simpleProgram3states/" ++ show n ++ ".dot") n simpleProgram3) [0..10] 
+  mapM_ (\n -> printStates ("simpleProgram3states/" ++ show n ++ ".dot") n simpleProgram3) [0..10]
+  --mapM_ (\n -> printBDD ("simpleProgram3states/" ++ show n ++ ".dot") (progStatesBDD $ list !! n)) [0..length list - 1]
+  --  where
+  --    list = stepList (progToBDD simpleProgram3) (defaultProgState simpleProgram3)
 
 ill22 = do
   printBDD "openeq1.dot" $ BDDeq [0,0] [1,1] BDDTrue BDDFalse
