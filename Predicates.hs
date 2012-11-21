@@ -116,16 +116,12 @@ toIndexFunc (PermPerm indices) x =
 
 
 data OrdPerm = OrdPerm (Permutation Bool) ArgOrd
-  deriving (Typeable)
+  deriving (Eq, Show, Typeable)
 instance ArgOrdClass OrdPerm where
   argCompare (OrdPerm perm ord) x y =
     argCompare ord (toIndexFunc perm x) (toIndexFunc perm y)
 
 --should not use it
-instance Show OrdPerm where
-  show (OrdPerm perm ord) = "permOrd (" ++ show perm ++ ", " ++ show ord ++ ")"
-instance Eq OrdPerm where
-  _ == _ = False
 permOrd perm ord =
   ArgOrd $ OrdPerm perm ord
     

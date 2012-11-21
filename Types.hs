@@ -22,6 +22,7 @@ data Insn =
   | Leave String
   | Spawn String Prog
   | Assert String
+    deriving Eq
 
 instance Show Insn where
   show (Label str insn) = "Label \"" ++ str ++ "\": " ++ show insn
@@ -176,6 +177,9 @@ data Arithmetic = Arithmetic {
   arithPredicate :: Predicate
 }
 
+instance Eq Arithmetic where
+  _ == _ = False
+
 data Pid = Pid Int deriving (Eq, Ord)
 
 instance Show Pid where
@@ -184,7 +188,7 @@ instance Show Pid where
 data Prog = Prog 
   { 
     prog_insns :: [Insn] 
-  } deriving Show
+  } deriving (Eq, Show)
   
 data Model = Model
   {    

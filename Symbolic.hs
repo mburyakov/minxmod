@@ -79,29 +79,21 @@ predArithStacks ar =
 
 -- ord on state set
 data OrdState = OrdState
-  deriving (Typeable)
+  deriving (Eq, Show, Typeable)
 instance ArgOrdClass OrdState where
   argCompare OrdState x y =
     Just $ compare x y
 
 --should not use it
-instance Show OrdState where
-  show OrdState = "stateOrd"
-instance Eq OrdState where
-  _ == _ = False
 stateOrd = ArgOrd OrdState
 
 lineOrdPermute n i = [i !! 1] ++ [(i !! 2) + n] ++ (drop 3 i) ++ [i !! 0]
 
 --should not use it
-instance Show OrdLine where
-  show (OrdLine insn) = "(lineOrd (" ++ show insn ++ "))"
-instance Eq OrdLine where
-  _ == _ = False
 lineOrd insn = ArgOrd $ OrdLine insn
 
 data OrdLine = OrdLine Insn
-  deriving (Typeable)
+  deriving (Eq, Show, Typeable)
 instance ArgOrdClass OrdLine where
   argCompare (OrdLine insn@(Arith ar)) x y =
       let
@@ -196,7 +188,7 @@ instance ArgOrdClass OrdLine where
 
 --globalOrd on Kripke structure
 data OrdGlobal = OrdGlobal
-  deriving (Typeable)
+  deriving (Eq, Show, Typeable)
 instance ArgOrdClass OrdGlobal where
   argCompare OrdGlobal x y =
     Just $ compare (permute x) (permute y)
@@ -205,10 +197,6 @@ instance ArgOrdClass OrdGlobal where
 
 
 --should not use it
-instance Show OrdGlobal where
-  show OrdGlobal = "globalOrd"
-instance Eq OrdGlobal where
-  _ == _ = False
 globalOrd =
   ArgOrd OrdGlobal
 
