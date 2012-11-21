@@ -1,26 +1,39 @@
+{-# LANGUAGE DeriveDataTypeable #-}
+
 module Examples where
 
 import Types
 import Predicates
 import ArgTree
+import ArgOrd
 import Symbolic
 import Symbolic.Step
 import Data.Boolean
+import Data.Typeable
 import Arithmetic
 import BDD
 
-arByteAddStacksOrdering = ArgOrd {
-  ordShow = "arByteAddStacksOrdering",
-  argCompare = \x y ->
+arByteAddStacksOrdering = ArgOrd $ OrdUnknown {
+  argUnknownCompare = \x y ->
     Just $ case (isTail x, isTail y) of
       (False, False) -> compare (permute x) (permute y)
       (True,  False) -> GT
       (False, True)  -> LT
-      (True,  True)  -> compare x y
-  }
-    where
-      permute l = ((tail.tail) l) ++ [l!!0, l!!1]
-      isTail l = l!!1>=2 || (l!!0==1 && l!!1==1)
+      (True,  True)  -> compare x y,
+  argUnknownShow = "arByteAddStacksOrdering"
+}
+  where
+    permute l = ((tail.tail) l) ++ [l!!0, l!!1]
+    isTail l = l!!1>=2 || (l!!0==1 && l!!1==1)
+
+data OrdUnknown = OrdUnknown { argUnknownCompare :: ArgIndex -> ArgIndex -> Maybe Ordering, argUnknownShow :: String}
+  deriving Typeable
+instance Show OrdUnknown where
+  show ou = argUnknownShow ou
+instance Eq OrdUnknown where
+  _ == _ = False
+instance ArgOrdClass OrdUnknown where
+  argCompare ou = argUnknownCompare ou
 
 templateValueType t =
   argTemplate $ binSize t

@@ -13,6 +13,7 @@ import Data.GraphViz
 import Data.GraphViz.Attributes.Complete
 import Data.Boolean
 import ArgTree
+import ArgOrd
 import Checker
 import Symbolic
 import Symbolic.Step
@@ -42,7 +43,7 @@ ill1'' =
 --         (BDDv [0,1,0] BDDTrue BDDFalse)
   
   
-ao = ArgOrd (\x y -> Just $ compare (tail x, head x) (tail y, head y)) ""
+ao = ArgOrd $ OrdUnknown (\x y -> Just $ compare (tail x, head x) (tail y, head y)) ""
 -- ao = ArgOrd (\x y -> compare (reverse x) (reverse y)) ""
 
 

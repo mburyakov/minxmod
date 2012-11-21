@@ -1,10 +1,14 @@
+{-# LANGUAGE DeriveDataTypeable #-}
+
 module Symbolic where
 
 import Types
 import Predicates
 import ArgTree
+import ArgOrd
 import Arithmetic
 import Data.Boolean
+import Data.Typeable
 import DebugStub hiding (assert)
 import Debug1 (assert)
 
@@ -74,20 +78,32 @@ predArithStacks ar =
       outl = outputDepth ar
 
 -- ord on state set
-stateOrd :: ArgOrd
-stateOrd =
-  ArgOrd {
-    ordShow = "stateOrd",
-    argCompare = \x y -> Just $ compare x y
-  }
+data OrdState = OrdState
+  deriving (Typeable)
+instance ArgOrdClass OrdState where
+  argCompare OrdState x y =
+    Just $ compare x y
+
+--should not use it
+instance Show OrdState where
+  show OrdState = "stateOrd"
+instance Eq OrdState where
+  _ == _ = False
+stateOrd = ArgOrd OrdState
 
 lineOrdPermute n i = [i !! 1] ++ [(i !! 2) + n] ++ (drop 3 i) ++ [i !! 0]
 
-lineOrd :: Insn -> ArgOrd
-lineOrd insn@(Arith ar) =
-  ArgOrd {
-    ordShow = "(lineOrd (" ++ show insn ++ "))",
-    argCompare = \x y ->
+--should not use it
+instance Show OrdLine where
+  show (OrdLine insn) = "(lineOrd (" ++ show insn ++ "))"
+instance Eq OrdLine where
+  _ == _ = False
+lineOrd insn = ArgOrd $ OrdLine insn
+
+data OrdLine = OrdLine Insn
+  deriving (Typeable)
+instance ArgOrdClass OrdLine where
+  argCompare (OrdLine insn@(Arith ar)) x y =
       let
         xp = case (x !! 0, x !! 1) of
           (0, 1) ->
@@ -112,11 +128,7 @@ lineOrd insn@(Arith ar) =
               argCompare stateOrd xp yp
             (0, 1) ->
               argCompare stateOrd xp yp
-  }
-lineOrd insn@(Jmp str) =
-  ArgOrd {
-    ordShow = "(lineOrd (" ++ show insn ++ "))",
-    argCompare = \x y ->
+  argCompare (OrdLine insn@(Jmp str)) x y =
       let
         xp =
             lineOrdPermute 0 x
@@ -131,11 +143,7 @@ lineOrd insn@(Jmp str) =
               argCompare stateOrd xp yp
             (0, 1) ->
               argCompare stateOrd xp yp
-  }
-lineOrd insn@(JmpCall str) =
-  ArgOrd {
-    ordShow = "(lineOrd (" ++ show insn ++ "))",
-    argCompare = \x y ->
+  argCompare (OrdLine insn@(JmpCall str)) x y =
       let
         xp = case (x !! 0, x !! 1) of
           (_, 1) ->
@@ -160,11 +168,7 @@ lineOrd insn@(JmpCall str) =
               argCompare stateOrd xp yp
             (0, 1) ->
               argCompare stateOrd xp yp
-  }
-lineOrd insn@JmpRet =
-  ArgOrd {
-    ordShow = "(lineOrd (" ++ show insn ++ "))",
-    argCompare = \x y ->
+  argCompare (OrdLine insn@JmpRet) x y =
       let
         xp = case (x !! 0, x !! 1) of
           (_, 1) ->
@@ -189,17 +193,25 @@ lineOrd insn@JmpRet =
               argCompare stateOrd xp yp
             (0, 1) ->
               argCompare stateOrd xp yp
-  }
 
 --globalOrd on Kripke structure
+data OrdGlobal = OrdGlobal
+  deriving (Typeable)
+instance ArgOrdClass OrdGlobal where
+  argCompare OrdGlobal x y =
+    Just $ compare (permute x) (permute y)
+      where
+        permute i = (i !! 1, i !! 2, drop 3 i, i !! 0)
+
+
+--should not use it
+instance Show OrdGlobal where
+  show OrdGlobal = "globalOrd"
+instance Eq OrdGlobal where
+  _ == _ = False
 globalOrd =
-  ArgOrd {
-    ordShow = "globalOrd",
-    argCompare = \x y ->
-      Just $ compare (permute x) (permute y)
-  }
-    where
-      permute i = (i !! 1, i !! 2, drop 3 i, i !! 0)
+  ArgOrd OrdGlobal
+
 
 bddLine :: Integral s => (s -> Value) -> Counter Value -> EnumInsn s -> Predicate
 bddLine lineV c (EnumInsn n insn@(Arith ar)) =

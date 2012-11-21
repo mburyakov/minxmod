@@ -4,6 +4,7 @@ module BDD where
 
 import Predicates
 import ArgTree
+import ArgOrd
 import qualified Data.Map as Map
 import Data.Graph.Inductive.Tree
 import qualified Data.Graph.Inductive.Graph as Graph
@@ -13,9 +14,6 @@ import qualified Data.Text.Lazy as Lazy
 import Debug.Trace
 
 type BDDIndex = Int
-
-instance Eq ArgOrd where
-  (==) = const $ const False
 
 data BDDNode = 
     NodeTrue

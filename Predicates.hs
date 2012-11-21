@@ -1,5 +1,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 
 module Predicates where
 
@@ -9,6 +10,8 @@ import DebugStub
 import qualified Debug1
 import Data.Monoid
 import Control.Monad
+import ArgOrd
+import Data.Typeable
 
 data Predicate =
     PredArg   ArgIndex
@@ -111,33 +114,21 @@ toIndexFunc (PermPerm indices) x =
       (e1:rest, ArgArg left) = argSoftDrop x indices
       (e2:rleft) = reverse left
 
-data ArgOrd = ArgOrd {
-  argCompare :: ArgIndex -> ArgIndex -> Maybe Ordering,
-  ordShow :: String
-}
-instance Show ArgOrd where
-  show ao = ordShow ao
 
-instance Monoid ArgOrd where
-  mempty = ArgOrd {
-    ordShow = "emptyOrg",
-    argCompare = const $ const Nothing
-  }
+data OrdPerm = OrdPerm (Permutation Bool) ArgOrd
+  deriving (Typeable)
+instance ArgOrdClass OrdPerm where
+  argCompare (OrdPerm perm ord) x y =
+    argCompare ord (toIndexFunc perm x) (toIndexFunc perm y)
 
-  mappend a b = ArgOrd {
-    ordShow = show a ++ "<>" ++ show b,
-    argCompare = \x y ->
-      argCompare a x y `mplus`
-      argCompare b x y
-  }
-
-permOrd :: Permutation Bool -> ArgOrd -> ArgOrd
+--should not use it
+instance Show OrdPerm where
+  show (OrdPerm perm ord) = "permOrd (" ++ show perm ++ ", " ++ show ord ++ ")"
+instance Eq OrdPerm where
+  _ == _ = False
 permOrd perm ord =
-  ArgOrd {    
-    argCompare = \x y ->
-      argCompare ord (toIndexFunc perm x) (toIndexFunc perm y),
-    ordShow = "permOrd (" ++ show perm ++ ", " ++ show ord ++ ")"
-  }
+  ArgOrd $ OrdPerm perm ord
+    
 
 fixReduce o b = BDDforceOrd Comp o $ reducePred o b
 
