@@ -17,7 +17,7 @@ data ArgOrd = forall a . (ArgOrdClass a, Show a, Eq a, Typeable a) => ArgOrd a
 instance ArgOrdClass ArgOrd where
   argCompare (ArgOrd o) = argCompare o
 instance Show ArgOrd where
-  show (ArgOrd a) = "(ArgOrd " ++ show (typeOf a) ++ " " ++ show a ++ ")"
+  show (ArgOrd a) = show a --"(ArgOrd " ++ show (typeOf a) ++ " " ++ show a ++ ")"
 instance Eq ArgOrd where
   (ArgOrd v1) == (ArgOrd v2) =
     mv2' /= Nothing && v1 == v2'
