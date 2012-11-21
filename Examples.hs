@@ -109,5 +109,8 @@ progToPred prog =
 countBDDNodes bdd =
   bddRoot $ putBDD bdd emptyBox
 
---maxStatesNodes prog =
-  
+countStatesNodes prog =
+  map (countBDDNodes.progStatesBDD) (stepList kripke start)
+    where
+      kripke = progToBDD prog
+      start = defaultProgState prog
