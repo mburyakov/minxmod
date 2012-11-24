@@ -99,8 +99,9 @@ predIncAdd n1 n2 na =
         (PredPerm (PermPerm $ ArgList [ArgList [ArgArg [0,0,1], ArgArg [0,1,1]], ArgList [ArgArg [1,0,1]]]) (predIncAdd (n1-1) (n2-1) (na-1)))
         (PredPerm (PermPerm $ ArgList [ArgList [ArgArg [0,0,1], ArgArg [0,1,1]], ArgList [ArgArg [1,0,1]]]) (predAdd (n1-1) (n2-1) (na-1))))
 
-byteT = SmallBoundedType 0 255
-byteV = SmallBoundedValue 0 255
+byteLimit = 256
+byteT = SmallBoundedType 0 (byteLimit-1)
+byteV = SmallBoundedValue 0 (byteLimit-1)
 
 arByteAdd = Arithmetic {
   arithSignature = ([byteT, byteT], [byteT]),

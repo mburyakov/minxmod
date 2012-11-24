@@ -23,7 +23,7 @@ arByteAddStacksOrdering = ArgOrd $ OrdUnknown {
   argUnknownShow = "arByteAddStacksOrdering"
 }
   where
-    permute l = ((tail.tail) l) ++ [l!!0, l!!1]
+    permute l = ((tail.tail) l, [l!!0, l!!1])
     isTail l = l!!1>=2 || (l!!0==1 && l!!1==1)
 
 data OrdUnknown = OrdUnknown { argUnknownCompare :: ArgIndex -> ArgIndex -> Maybe Ordering, argUnknownShow :: String}
@@ -85,6 +85,19 @@ simpleProgram3 =
     Label "end" $ Arith arNop
   ]
 
+simpleProgram4 =
+  compile [
+    Arith $ arPush $ byteV 1,
+    Arith $ arPush $ byteV 2,
+    Arith $ arByteAdd
+  ]
+
+simpleProgram5 =
+  compile [
+    Label "begin" $ Arith $ arPush $ byteV 0,
+    Jmp "begin"
+  ]
+
 xorList _ [] = []
 xorList True  (x:xs) = (not x) : xorList x xs
 xorList False (x:xs) = x : xorList x xs
@@ -121,6 +134,9 @@ progToPred prog =
 
 countBDDNodes bdd =
   bddRoot $ putBDD bdd emptyBox
+
+countNodes prog =
+  countBDDNodes $ progToBDD prog
 
 countStatesNodes prog =
   map (countBDDNodes.progStatesBDD) (stepList kripke start)

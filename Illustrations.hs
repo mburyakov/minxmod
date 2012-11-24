@@ -218,6 +218,13 @@ ill22 = do
   printBDD "openeq2.dot" $ BDDeq [0,0,0] [1,1,0] (BDDeq [0,1] [1,2] BDDTrue BDDFalse) BDDFalse
   printBDD "openeq3.dot" $ BDDv [0,0] (BDDv [1,0] (BDDeq [0,1] [1,2] BDDTrue BDDFalse) BDDFalse) (BDDv [1,0] BDDFalse (BDDeq [0,1] [1,2] BDDTrue BDDFalse)) 
 
+ill23 =
+  printStates "simpleProgram4states.dot" 10 simpleProgram4
+
+ill24 = do
+  printProgBDD "simpleProgram5.dot" simpleProgram5
+  printStates "simpleProgram5states.dot" 10 simpleProgram5
+
 data B = T | F
 instance Binarizable B where
   toArgList T = toArgList True
