@@ -22,13 +22,19 @@ withSecond = PredPerm permSecond
 withParentFirst  = PredPerm permParentFirst
 withParentSecond = PredPerm permParentSecond
 
-withStacks = withPerm (ArgList [ArgArg[0,1,0],ArgArg[1,1,0]])
 
-withAddressStack = withPerm (ArgArg[0,0])
+permStacks = PermPerm $ ArgList [ArgArg[0,1,0],ArgArg[1,1,0]]
+withStacks = PredPerm permStacks
 
-withAddressStacks = withPerm (ArgList [ArgArg[0,0,0],ArgArg[1,0,0]])
+permAddressStack = PermPerm $ ArgArg[0,0]
+withAddressStack = PredPerm permAddressStack
 
-withAddressStacksRest = withPerm (ArgList [ArgArg[0,0,1],ArgArg[1,0,1]])
+permAddressStacks = PermPerm $ ArgList [ArgArg[0,0,0],ArgArg[1,0,0]]
+withAddressStacks = PredPerm permAddressStacks
+
+
+permAddressStacksRest = PermPerm $ ArgList [ArgArg[0,0,1],ArgArg[1,0,1]]
+withAddressStacksRest = PredPerm permAddressStacksRest
 
 predIs [] =
   true       
