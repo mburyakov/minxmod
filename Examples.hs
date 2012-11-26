@@ -58,11 +58,15 @@ simpleProgram1 =
     Arith $ arPop boolT
   ]
 
-defaultState lineV =
-  ProgStates $ reducePred stateOrd $ withPerm (ArgArg[0,0,0]) (predIs $ valToBin (lineV 0))
+defaultState :: Integral s => Options -> (s -> Value) -> ProgStates
+defaultState opts lineV =
+  ProgStates $ reducePred stateOrd $ if lookup "bottom" opts == Nothing then pred1 else pred1 &&* pred2
+    where
+      pred1 = withPerm (ArgArg[0,0,0]) (predIs $ valToBin (lineV 0))
+      pred2 = PredArg [1,0,1]
 
-defaultProgState prog =
-  defaultState lineV
+defaultProgState opts prog =
+  defaultState opts lineV
     where
       (enumprog, lineV) = valueEnumerateProg prog
 
@@ -135,11 +139,11 @@ progToPred prog =
 countBDDNodes bdd =
   bddRoot $ putBDD bdd emptyBox
 
-countNodes prog =
-  countBDDNodes $ progToBDD prog
+countNodes options prog =
+  countBDDNodes $ progToBDD options prog
 
-countStatesNodes prog =
+countStatesNodes options prog =
   map (countBDDNodes.progStatesBDD) (stepList kripke start)
     where
-      kripke = progToBDD prog
-      start = defaultProgState prog
+      kripke = progToBDD options prog
+      start = defaultProgState options prog

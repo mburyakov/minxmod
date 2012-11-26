@@ -9,6 +9,7 @@ import ArgOrd
 import Arithmetic
 import Data.Boolean
 import Data.Typeable
+import Data.Monoid
 import DebugStub hiding (assert)
 import Debug1 (assert)
 
@@ -73,9 +74,25 @@ outputDepth = length.snd.arithSignature
 predArithStacks ar =
   pred &&* (eq [0,inl] [1,outl])
     where
-      pred = arithPredicate ar
+      pred = PredBDD bdd
+      bdd = reducePred (permOrd permStacks (lineOrd (Arith ar))) (arithPredicate ar)
       inl = inputDepth ar
       outl = outputDepth ar
+      f ls = ls !! 0 : ls !! 1 : 0 : drop 2 ls
+
+-- predicate on bottomed input and output stacks
+predArithBottomedStacks ar =
+  pred &&* (eq [0,inl] [1,outl])
+    &&* foldl (&&*) true valsBefore
+      &&* foldl (&&*) true valsAfter
+    where
+      valsBefore = map (notB . PredArg . (\x->[0,x,0])) [0..inl -1]
+      valsAfter  = map (notB . PredArg . (\x->[1,x,1])) [0..outl-1]
+      pred = PredBDD bdd
+      bdd = processBDDv f $ reducePred (permOrd permStacks (lineOrd (Arith ar))) (arithPredicate ar)
+      inl = inputDepth ar
+      outl = outputDepth ar
+      f ls = ls !! 0 : ls !! 1 : 0 : drop 2 ls
 
 -- ord on state set
 data OrdState = OrdState
@@ -200,17 +217,18 @@ instance ArgOrdClass OrdGlobal where
 globalOrd =
   ArgOrd OrdGlobal
 
+type Options = [(String, String)]
 
-bddLine :: Integral s => (s -> Value) -> Counter Value -> EnumInsn s -> Predicate
-bddLine lineV c (EnumInsn n insn@(Arith ar)) =
+bddLine :: Integral s => Options -> (s -> Value) -> Counter Value -> EnumInsn s -> Predicate
+bddLine opts lineV c (EnumInsn n insn@(Arith ar)) =
   (withFirst $ withAddressStack $ withFirst $ predIs $ valToBin (lineV un))
     &&* (withSecond $ withAddressStack $ withFirst $ predIs $ valToBin (lineV (un+1)))
     &&* (PredBDD $ trace' $ fixReduce (lineOrd insn) (
             (withAddressStacksRest $ predArithStacks arNop)
-              &&* (withStacks (predArithStacks ar))))
+              &&* (withStacks (if lookup "bottom" opts == Nothing then predArithStacks ar else predArithBottomedStacks ar))))
         where
           un = fromIntegral n
-bddLine lineV c (EnumInsn n insn@(Jmp str)) =
+bddLine opts lineV c (EnumInsn n insn@(Jmp str)) =
   (withFirst $ withAddressStack $ withFirst $ predIs $ valToBin (lineV un))
     &&* (withSecond $ withAddressStack $ withFirst $ predIs $ valToBin (lineV trois))
     &&* (PredBDD $ fixReduce (lineOrd insn) (
@@ -220,7 +238,7 @@ bddLine lineV c (EnumInsn n insn@(Jmp str)) =
           un = fromIntegral n
           (Just deux) = lookup str c
           trois = (fromIntegral.sbValue) deux
-bddLine lineV c (EnumInsn n insn@(JmpCall str)) =
+bddLine opts lineV c (EnumInsn n insn@(JmpCall str)) =
   (withFirst $ withAddressStack $ withFirst $ predIs $ valToBin (lineV un))
     &&* (withSecond $ withAddressStack $ withFirst $ predIs $ valToBin (lineV trois))
     &&* (PredBDD $ fixReduce (lineOrd insn) (
@@ -231,7 +249,7 @@ bddLine lineV c (EnumInsn n insn@(JmpCall str)) =
           (Just deux) = lookup str c
           trois = (fromIntegral.sbValue) deux
           addrOp = arPush $ lineV un
-bddLine lineV c (EnumInsn n insn@(JmpRet)) =
+bddLine opts lineV c (EnumInsn n insn@(JmpRet)) =
   (withFirst $ withAddressStack $ withFirst $ predIs $ valToBin (lineV un))
    &&* (PredPerm (PermPerm$ArgList[ArgArg[0,0,1,0],ArgArg[1,0,0,0]]) (predInc size size))
     &&* (PredBDD $ fixReduce (lineOrd insn) (
@@ -242,9 +260,9 @@ bddLine lineV c (EnumInsn n insn@(JmpRet)) =
           size = binSize $ valType $ lineV undefined
           addrOp = arPop $ valType $ lineV undefined
 
-progToBDD prog =
+progToBDD options prog =
   processForces (const $ Just Step) $ reducePred globalOrd $ foldl (||*) (false) bdds
     where
       (veprog, valfun) = valueEnumerateProg prog
       veinsns = map (fmap sbValue) $ enum_prog_insns veprog
-      bdds = map (bddLine valfun $ enum_prog_counter veprog) veinsns
+      bdds = map (bddLine options valfun $ enum_prog_counter veprog) veinsns

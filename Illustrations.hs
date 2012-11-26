@@ -91,7 +91,7 @@ ill7 = do
   putStrLn $ show $ integerEnumerateProg $ incrementer "var"
 
 ill8 =
-  progToBDD simpleProgram1
+  progToBDD [] simpleProgram1
 
 boxedBDD1 =
   putBDD (BDDv [0] BDDTrue (BDDeq [1] [2] BDDFalse BDDTrue)) emptyBox
@@ -108,11 +108,11 @@ printBDD filename bdd =
 ill10 =
   printDotFile "boxedBDD1.dot" $ defaultVis $ toGraph $ bddBox boxedBDD1
 
-printProgBDD filename prog =
-  printBDD filename $ progToBDD prog
+printProgBDD filename options prog =
+  printBDD filename $ progToBDD options prog
 
 ill11 =
-  printProgBDD "simpleProgram1.dot"  simpleProgram1
+  printProgBDD "simpleProgram1.dot" [] simpleProgram1
 
 predTestExists =
   reducePred stateOrd $ predExists [1] $ PredAll 3
@@ -143,11 +143,11 @@ ill14 =
   bdd
   --(start, step bdd start)
     where
-      bdd = trace' $ progToBDD simpleProgram1
+      bdd = trace' $ progToBDD [] simpleProgram1
       (veprog, fun) = valueEnumerateProg simpleProgram1
-      start = trace' $ defaultState fun
+      start = trace' $ defaultState [] fun
 
-printStates fileName iterations prog = do
+printStates fileName iterations options prog = do
   printBDD fileName $ progStatesBDD ans
   if x>0 then
     putStrLn $ show (iterations-x) ++ " steps instead of " ++ show iterations ++ " performed. Fixed point found!"
@@ -155,9 +155,9 @@ printStates fileName iterations prog = do
     putStrLn $ show iterations ++ " steps in not enough. Try more steps!"
     where
       (ans, x) = fixedPoint iterations bdd start
-      bdd = trace' $ progToBDD prog
+      bdd = trace' $ progToBDD options prog
       (veprog, fun) = valueEnumerateProg prog
-      start = trace' $ defaultState fun
+      start = trace' $ defaultState options fun
 
 {-performSteps iterations prog = do
   (ans, x)
@@ -168,10 +168,10 @@ printStates fileName iterations prog = do
       start = trace' $ reducePred stateOrd $ defaultState fun
 -}
 ill15 =
-  printStates "simpleProgram1states.dot" 7 simpleProgram1
+  printStates "simpleProgram1states.dot" 7 [] simpleProgram1
 
 ill16 =
-  printProgBDD "simpleProgram2.dot"  simpleProgram2
+  printProgBDD "simpleProgram2.dot" [] simpleProgram2
   
 ill17 = do
   putStrLn $ show px1
@@ -180,12 +180,12 @@ ill17 = do
   putStrLn ""
   putStrLn $ show r
     where
-      sp3 = progToBDD simpleProgram3
-      x0 = defaultState byteV
+      sp3 = progToBDD [] simpleProgram3
+      x0 = defaultState [] byteV
       x1 = step sp3 x0
       px1 = reducePred globalOrd $ (withFirst $ PredBDD $ progStatesBDD x1)
       r = reducePred globalOrd $ (withFirst $ PredBDD $ progStatesBDD x1) &&* (PredBDD x)
-      x = processForces (const $ Just Step) $ reducePred (lineOrd $ Arith $ arPush $ toBoolValue False) $ (bddLine byteV [] (EnumInsn 1 (Arith $ arPush $ toBoolValue False)))
+      x = processForces (const $ Just Step) $ reducePred (lineOrd $ Arith $ arPush $ toBoolValue False) $ (bddLine mempty byteV [] (EnumInsn 1 (Arith $ arPush $ toBoolValue False)))
 
 
 -- ill19 should return same as ill18
@@ -204,11 +204,11 @@ ill19 = do
       r = reducePred globalOrd $ (PredBDD a) &&* (PredBDD (BDDv [0,1,0,0] BDDTrue BDDFalse))
 
 ill20 =
-  printProgBDD "simpleProgram3.dot"  simpleProgram3
+  printProgBDD "simpleProgram3.dot" [] simpleProgram3
 
 ill21 = do
-  printStates "simpleProgram3states.dot" 10 simpleProgram3
-  mapM_ (\n -> printStates ("simpleProgram3states/" ++ show n ++ ".dot") n simpleProgram3) [0..10]
+  printStates "simpleProgram3states.dot" 10 [] simpleProgram3
+  mapM_ (\n -> printStates ("simpleProgram3states/" ++ show n ++ ".dot") n [] simpleProgram3) [0..10]
   --mapM_ (\n -> printBDD ("simpleProgram3states/" ++ show n ++ ".dot") (progStatesBDD $ list !! n)) [0..length list - 1]
   --  where
   --    list = stepList (progToBDD simpleProgram3) (defaultProgState simpleProgram3)
@@ -219,11 +219,17 @@ ill22 = do
   printBDD "openeq3.dot" $ BDDv [0,0] (BDDv [1,0] (BDDeq [0,1] [1,2] BDDTrue BDDFalse) BDDFalse) (BDDv [1,0] BDDFalse (BDDeq [0,1] [1,2] BDDTrue BDDFalse)) 
 
 ill23 =
-  printStates "simpleProgram4states.dot" 10 simpleProgram4
+  printStates "simpleProgram4states.dot" 10 [] simpleProgram4
 
 ill24 = do
-  printProgBDD "simpleProgram5.dot" simpleProgram5
-  printStates "simpleProgram5states.dot" 10 simpleProgram5
+  printProgBDD "simpleProgram5.dot" [] simpleProgram5
+  printStates "simpleProgram5states.dot" 10 [] simpleProgram5
+
+ill25 = do
+  printProgBDD "simpleProgram5b.dot" options simpleProgram5
+  printStates "simpleProgram5bstates.dot" 2 options simpleProgram5
+    where
+      options = [("bottom","")]
 
 data B = T | F
 instance Binarizable B where
