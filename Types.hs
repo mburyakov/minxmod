@@ -177,6 +177,7 @@ data Arithmetic = Arithmetic {
   arithPredicate :: Predicate
 }
 
+-- stub
 instance Eq Arithmetic where
   _ == _ = False
 
