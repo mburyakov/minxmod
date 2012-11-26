@@ -17,7 +17,7 @@ data Predicate =
     PredArg   ArgIndex
   | PredNeg       (Predicate)
   | PredOr        (Predicate) (Predicate)
-  | PredPerm      (Permutation Bool) (Predicate)
+  | PredPerm      Permutation (Predicate)
   | PredAll   Int
   | PredAny   Int
   | PredExists ArgIndex Predicate
@@ -60,12 +60,12 @@ instance EqB Predicate where
 instance IfB Predicate where
   ifB c l r = (c &&* l) ||* (notB c &&* r)
 
-data Permutation a =
-    PermComp (Permutation a) (Permutation a)   
+data Permutation =
+    PermComp Permutation Permutation  
   | PermPerm (ArgTree ArgIndex)
   deriving (Show, Eq)
 
-instance Monoid (Permutation a) where
+instance Monoid Permutation where
   mempty = PermPerm (ArgArg [0])
   mappend p1 p2 = PermComp p1 p2
 
@@ -97,7 +97,7 @@ instance ToFuncable BDD where
   toFunc (BDDforceOrd _ _ b) x = toFunc b x
 
 
-toPerm :: Permutation a -> ArgTree a -> ArgTree a
+toPerm :: Permutation -> ArgTree a -> ArgTree a
 toPerm (PermComp p1 p2) x =
   (toPerm p1).(toPerm p2) $ x
 toPerm (PermPerm indices) x =
@@ -105,7 +105,7 @@ toPerm (PermPerm indices) x =
     (ArgArg  i ) -> argDrop i x
     (ArgList il) -> ArgList [ toPerm (PermPerm i) x | i <- il]
 
-toIndexFunc :: Permutation a -> ArgIndex -> ArgIndex
+toIndexFunc :: Permutation -> ArgIndex -> ArgIndex
 toIndexFunc (PermComp p1 p2) x = 
   (toIndexFunc p2).(toIndexFunc p1) $ x
 toIndexFunc (PermPerm indices) x =
@@ -115,7 +115,7 @@ toIndexFunc (PermPerm indices) x =
       (e2:rleft) = reverse left
 
 
-data OrdPerm = OrdPerm (Permutation Bool) ArgOrd
+data OrdPerm = OrdPerm Permutation ArgOrd
   deriving (Eq, Show, Typeable)
 instance ArgOrdClass OrdPerm where
   argCompare (OrdPerm perm ord) x y =
