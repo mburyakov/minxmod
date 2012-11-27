@@ -228,7 +228,7 @@ ill24 = do
 
 ill25 = do
   printProgBDD "simpleProgram5b.dot" options simpleProgram5
-  printStates "simpleProgram5bstates.dot" 2 options simpleProgram5
+  mapM_ (\n -> printStates ("simpleProgram5bstates/" ++ show n ++ ".dot") n options simpleProgram5) [0..10]
     where
       options = [("bottom","")]
 
