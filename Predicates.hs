@@ -106,7 +106,7 @@ processForces f (BDDv i a b) =
 processForces f (BDDeq i j a b) =
   BDDeq i j (processForces f a) (processForces f b)
 
-processBDDv :: (ArgIndex -> ArgIndex) -> BDD -> BDD 
+processBDDv :: Permutation -> BDD -> BDD
 processBDDv f (BDDforceOrd t ord bdd) =
   BDDforceOrd t ord (processBDDv f bdd)
 processBDDv f BDDTrue =
@@ -114,7 +114,7 @@ processBDDv f BDDTrue =
 processBDDv f BDDFalse =
   BDDFalse
 processBDDv f (BDDv i a b) =
-  BDDv (f i) (processBDDv f a) (processBDDv f b)
+  BDDv (toIndexFunc f i) (processBDDv f a) (processBDDv f b)
 processBDDv f (BDDeq i j a b) =
   BDDeq i j (processBDDv f a) (processBDDv f b)
 

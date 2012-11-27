@@ -83,6 +83,11 @@ predArithStacks ar =
       outl = outputDepth ar
       f ls = ls !! 0 : ls !! 1 : 0 : drop 2 ls
 
+data PermInsertBottom = PermInsertBottom
+  deriving (Eq, Show, Typeable)
+instance PermutationClass PermInsertBottom where
+  toIndexFunc PermInsertBottom ls = ls !! 0 : ls !! 1 : 0 : drop 2 ls
+
 -- predicate on bottomed input and output stacks
 predArithBottomedStacks ar =
   pred &&* (eq [0,inl] [1,outl])
@@ -92,7 +97,7 @@ predArithBottomedStacks ar =
       valsBefore = map (notB . PredArg . (\x->[0,x,0])) [0..inl -1]
       valsAfter  = map (notB . PredArg . (\x->[1,x,1])) [0..outl-1]
       pred = PredBDD bdd
-      bdd = processBDDv f $ reducePred (permOrd permStacks (lineOrd (Arith ar))) (arithPredicate ar)
+      bdd = processBDDv (Permutation PermInsertBottom) $ reducePred (permOrd permStacks (lineOrd (Arith ar))) (arithPredicate ar)
       inl = inputDepth ar
       outl = outputDepth ar
       f ls = ls !! 0 : ls !! 1 : 0 : drop 2 ls
