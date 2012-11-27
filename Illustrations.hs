@@ -232,6 +232,32 @@ ill25 = do
     where
       options = [("bottom","")]
 
+illall = do 
+  putStrLn $ show ill1
+  putStrLn $ show ill3
+  putStrLn $ show ill4
+  putStrLn $ show ill5
+  putStrLn $ show ill6
+  ill7
+  putStrLn $ show ill8
+  putStrLn $ show ill9
+  ill10
+  ill11
+  putStrLn $ show ill12
+  ill13
+  putStrLn $ show ill14
+  ill15
+  ill16
+  ill17
+  putStrLn $ show ill18
+  putStrLn $ show ill19
+  ill20
+  ill21
+  ill22
+  ill23
+  ill24
+  ill25
+
 data B = T | F
 instance Binarizable B where
   toArgList T = toArgList True
