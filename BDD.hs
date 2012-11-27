@@ -32,7 +32,19 @@ data BDDNodeLabel =
   | LNodeIf ArgIndex
   | LNodeEq ArgIndex ArgIndex
   | LNodeForceOrd ForceOrdUsage ArgOrd
-    deriving Show
+
+showEqIndex i =
+  a ++ "|" ++ b
+    where
+      a = reverse . tail . reverse . show . reverse . tail . reverse $ i
+      b = tail . show $ [last i]
+
+instance Show BDDNodeLabel where
+  show LNodeTrue = "T"
+  show LNodeFalse = "F"
+  show (LNodeForceOrd usage ord) = "usage = " ++ show usage ++ "\nord = " ++ show ord
+  show (LNodeIf i) = show i
+  show (LNodeEq i j) = showEqIndex i ++ "=" ++ showEqIndex j
 
 bddNodeLabel NodeTrue =
   LNodeTrue
@@ -145,12 +157,6 @@ toGraph box =
     where
       g1 = Map.foldrWithKey (\k v g -> Graph.insNode (k,(bddNodeLabel v)) g) Graph.empty box
 
-showBDDNode LNodeTrue = "T"
-showBDDNode LNodeFalse = "F"
-showBDDNode (LNodeForceOrd usage ord) = "usage = " ++ show usage ++ "\nord = " ++ show ord
-showBDDNode (LNodeIf i) = show i
-showBDDNode (LNodeEq i j) = show i ++ "=" ++ show j
-
 dotParams = nonClusteredParams {
   fmtEdge =
     \(node1, node2, b) -> 
@@ -160,7 +166,7 @@ dotParams = nonClusteredParams {
         [Style [SItem Dashed []], Color	[X11Color Blue]],
   fmtNode =
     \(node, t) ->
-      [Label $ StrLabel $ Lazy.pack $ showBDDNode t]
+      [Label $ StrLabel $ Lazy.pack $ show t]
 }
 
 defaultVis :: (Graph.Graph gr) => gr BDDNodeLabel BDDEdgeLabel -> DotGraph Graph.Node
