@@ -292,14 +292,14 @@ reducePred o (PredAny n) =
       reducePred'' _ _ (PredAny 0) =
         BDDFalse
       reducePred'' prTrue o (PredAny n) =
-        BDDv [0] prTrue $ reducePred' o (PredPerm (PermPerm $ ArgArg [1]) (PredBDD $ reducePred'' prTrue o $ PredAny (n-1)))      
+        BDDv [0] prTrue $ reducePred' o (PredPerm (Permutation $ PermPerm $ ArgArg [1]) (PredBDD $ reducePred'' prTrue o $ PredAny (n-1)))      
 reducePred o (PredAll n) =
   reducePred'' BDDFalse o (PredAll n)
     where
       reducePred'' _ _ (PredAll 0) =
         BDDTrue
       reducePred'' prFalse o (PredAll n) =
-        BDDv [0] (reducePred' o (PredPerm (PermPerm $ ArgArg [1]) (PredBDD $ reducePred'' prFalse o $ PredAll (n-1)))) prFalse
+        BDDv [0] (reducePred' o (PredPerm (Permutation $ PermPerm $ ArgArg [1]) (PredBDD $ reducePred'' prFalse o $ PredAll (n-1)))) prFalse
 reducePred o (PredPerm perm1 (PredPerm perm2 x)) =
   reducePred' o (PredPerm newPerm (PredBDD $ reducePred' (permOrd newPerm o) x))
     where newPerm = perm2 <> perm1

@@ -119,8 +119,8 @@ fromGrayCode l =
 
 -- predicate on whole input and output stacks and pools      
 predArithThread ar =
-      PredPerm (PermPerm $ ArgList [ArgArg [0,0,0], ArgArg [1,0,0]]) (predArithStacks ar)
-  &&* PredPerm (PermPerm $ ArgList [ArgArg [0,1], ArgArg [1,1]]) (eq [0,0] [1,0])
+      withPerm (ArgList [ArgArg [0,0,0], ArgArg [1,0,0]]) (predArithStacks ar)
+  &&* withPerm (ArgList [ArgArg [0,1], ArgArg [1,1]]) (eq [0,0] [1,0])
 
 predLine :: Integral s => (s -> Value) -> EnumInsn s -> Predicate
 predLine lineV (EnumInsn n (Arith ar)) =

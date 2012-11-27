@@ -252,9 +252,10 @@ bddLine opts lineV c (EnumInsn n insn@(JmpCall str)) =
           (Just deux) = lookup str c
           trois = (fromIntegral.sbValue) deux
           addrOp = arPush $ lineV un
+-- should use more compact ordering
 bddLine opts lineV c (EnumInsn n insn@(JmpRet)) =
   (withFirst $ withAddressStack $ withFirst $ predIs $ valToBin (lineV un))
-   &&* (PredPerm (PermPerm$ArgList[ArgArg[0,0,1,0],ArgArg[1,0,0,0]]) (predInc size size))
+   &&* (withPerm (ArgList[ArgArg[0,0,1,0],ArgArg[1,0,0,0]]) (predInc size size))
     &&* (PredBDD $ fixReduce (lineOrd insn) (
             (withAddressStacksRest $ predArithStacks $ addrOp)
               &&* (withStacks (predArithStacks arNop))))

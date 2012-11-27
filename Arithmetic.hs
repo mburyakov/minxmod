@@ -8,16 +8,18 @@ import Predicates
 import Data.Boolean
 import Data.Monoid
 
-withPerm perm pred = PredPerm (PermPerm perm) pred
+withPerm perm pred = PredPerm (Permutation $ PermPerm perm) pred
+
+doPerm = Permutation . PermPerm
 
 withBefore = withFirst
 withAfter  = withSecond
 
-permFirst  = PermPerm $ ArgArg [0,0]
-permSecond = PermPerm $ ArgArg [1,0]
-permParentFirst  = PermPerm $ ArgList [ArgArg [0]]
+permFirst  = doPerm $ ArgArg [0,0]
+permSecond = doPerm $ ArgArg [1,0]
+permParentFirst  = doPerm $ ArgList [ArgArg [0]]
 --permParentSecond = PermPerm $ ArgList [error "undefined in permParentSecond", ArgArg [0]]
-permParentSecond = PermPerm (ArgArg[-1]) `mappend` permParentFirst
+permParentSecond = doPerm (ArgArg[-1]) `mappend` permParentFirst
 
 withFirst  = PredPerm permFirst
 withSecond = PredPerm permSecond
@@ -25,17 +27,17 @@ withParentFirst  = PredPerm permParentFirst
 withParentSecond = PredPerm permParentSecond
 
 
-permStacks = PermPerm $ ArgList [ArgArg[0,1,0],ArgArg[1,1,0]]
+permStacks = doPerm $ ArgList [ArgArg[0,1,0],ArgArg[1,1,0]]
 withStacks = PredPerm permStacks
 
-permAddressStack = PermPerm $ ArgArg[0,0]
+permAddressStack = doPerm $ ArgArg[0,0]
 withAddressStack = PredPerm permAddressStack
 
-permAddressStacks = PermPerm $ ArgList [ArgArg[0,0,0],ArgArg[1,0,0]]
+permAddressStacks = doPerm $ ArgList [ArgArg[0,0,0],ArgArg[1,0,0]]
 withAddressStacks = PredPerm permAddressStacks
 
 
-permAddressStacksRest = PermPerm $ ArgList [ArgArg[0,0,1],ArgArg[1,0,1]]
+permAddressStacksRest = doPerm $ ArgList [ArgArg[0,0,1],ArgArg[1,0,1]]
 withAddressStacksRest = PredPerm permAddressStacksRest
 
 predIs [] =
@@ -51,22 +53,22 @@ predEq n 0 =
 predEq n m =
   ifB
     ((PredArg [0,0]) ==* (PredArg [1,0]))
-    (PredPerm (PermPerm $ ArgList [ArgArg [0,1], ArgArg [1,1]]) $ predEq (n-1) (m-1))
+    (withPerm (ArgList [ArgArg [0,1], ArgArg [1,1]]) (predEq (n-1) (m-1)))
     false
 
 
 predInc n 0 =
   false
 predInc 0 m =
-  withAfter $ (PredArg [0]) &&* (PredPerm (PermPerm $ ArgArg [1]) (notB (PredAny (m-1))))
+  withAfter $ (PredArg [0]) &&* (withPerm (ArgArg [1]) (notB (PredAny (m-1))))
 predInc n m =
   ifB
     ((PredArg [0,0]) ==* (PredArg [1,0]))
     false
     (ifB
       (PredArg [0,0])
-      (PredPerm (PermPerm $ ArgList [ArgArg [0,1], ArgArg [1,1]]) $ predInc (n-1) (m-1))
-      (PredPerm (PermPerm $ ArgList [ArgArg [0,1], ArgArg [1,1]]) $ predEq (n-1) (m-1)))
+      (withPerm (ArgList [ArgArg [0,1], ArgArg [1,1]]) (predInc (n-1) (m-1)))
+      (withPerm (ArgList [ArgArg [0,1], ArgArg [1,1]]) (predEq (n-1) (m-1))))
 
 
 predAdd 0 n2 na =
@@ -85,8 +87,8 @@ predAdd n1 n2 na =
     false
     (ifB
       ((PredArg [0,0,0]) &&* (PredArg [0,1,0]))
-      (PredPerm (PermPerm $ ArgList [ArgList [ArgArg [0,0,1], ArgArg [0,1,1]], ArgList [ArgArg [1,0,1]]]) (predIncAdd (n1-1) (n2-1) (na-1)))
-      (PredPerm (PermPerm $ ArgList [ArgList [ArgArg [0,0,1], ArgArg [0,1,1]], ArgList [ArgArg [1,0,1]]]) (predAdd (n1-1) (n2-1) (na-1))))
+      (withPerm (ArgList [ArgList [ArgArg [0,0,1], ArgArg [0,1,1]], ArgList [ArgArg [1,0,1]]]) (predIncAdd (n1-1) (n2-1) (na-1)))
+      (withPerm (ArgList [ArgList [ArgArg [0,0,1], ArgArg [0,1,1]], ArgList [ArgArg [1,0,1]]]) (predAdd (n1-1) (n2-1) (na-1))))
 
 
 predIncAdd 0 n2 na =
@@ -104,8 +106,8 @@ predIncAdd n1 n2 na =
     false
     (ifB
       ((PredArg [0,0,0]) ||* (PredArg [0,1,0]))
-        (PredPerm (PermPerm $ ArgList [ArgList [ArgArg [0,0,1], ArgArg [0,1,1]], ArgList [ArgArg [1,0,1]]]) (predIncAdd (n1-1) (n2-1) (na-1)))
-        (PredPerm (PermPerm $ ArgList [ArgList [ArgArg [0,0,1], ArgArg [0,1,1]], ArgList [ArgArg [1,0,1]]]) (predAdd (n1-1) (n2-1) (na-1))))
+        (withPerm (ArgList [ArgList [ArgArg [0,0,1], ArgArg [0,1,1]], ArgList [ArgArg [1,0,1]]]) (predIncAdd (n1-1) (n2-1) (na-1)))
+        (withPerm (ArgList [ArgList [ArgArg [0,0,1], ArgArg [0,1,1]], ArgList [ArgArg [1,0,1]]]) (predAdd (n1-1) (n2-1) (na-1))))
 
 byteLimit = 256
 byteT = SmallBoundedType 0 (byteLimit-1)

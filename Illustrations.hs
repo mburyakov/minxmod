@@ -1,5 +1,6 @@
 module Illustrations where
 
+import Permutations
 import Types
 import Examples
 import Predicates
