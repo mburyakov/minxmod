@@ -2,16 +2,19 @@
 
 module Symbolic where
 
+import DebugStub
+import qualified Debug1
+
 import Types
-import Predicates
 import ArgTree
 import ArgOrd
+import Permutations
+import Predicates
 import Arithmetic
+
 import Data.Boolean
-import Data.Typeable
 import Data.Monoid
-import DebugStub hiding (assert)
-import Debug1 (assert)
+import Data.Typeable
 
 data EnumInsn i = EnumInsn {
   insnNum  :: i,

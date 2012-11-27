@@ -2,6 +2,7 @@
 
 module Examples where
 
+import Permutations
 import Types
 import Predicates
 import ArgTree

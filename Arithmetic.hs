@@ -1,8 +1,10 @@
 module Arithmetic where
 
 import Types
-import Predicates
 import ArgTree
+import Permutations
+import Predicates
+
 import Data.Boolean
 import Data.Monoid
 

@@ -2,7 +2,9 @@
 
 module ArgTree where 
 
-import Debug.Trace
+import Data.Monoid
+--import ArgOrd
+--import Debug.Trace
 
 data ArgTree a = ArgArg { argArg :: a } | ArgList { argList :: [ArgTree a] } deriving Eq
 
