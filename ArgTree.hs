@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleContexts, FlexibleInstances #-}
-
 module ArgTree where 
 
 import Data.Monoid

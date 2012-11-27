@@ -11,8 +11,6 @@ import ArgTree
 class ArgOrdClass a where
   argCompare :: a -> ArgIndex -> ArgIndex -> Maybe Ordering
 
-
-
 data ArgOrd = forall a . (ArgOrdClass a, Show a, Eq a, Typeable a) => ArgOrd a
 instance ArgOrdClass ArgOrd where
   argCompare (ArgOrd o) = argCompare o

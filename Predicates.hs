@@ -1,6 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
--- {-# LANGUAGE DeriveDataTypeable #-}
 
 module Predicates where
 
