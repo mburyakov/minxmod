@@ -127,6 +127,14 @@ arPush val = Arithmetic {
   arithPredicate = withPerm (ArgArg[1,0,0]) $ predIs $ valToBin $ val
 }
 
+arRand t@(SmallBoundedType from to) = Arithmetic {
+  arithSignature = ([], [t]),
+  arithFunc = \s -> map ((:s).v) [from .. to],
+  arithPredicate = true
+}
+  where
+    v = SmallBoundedValue from to
+
 arPop t = Arithmetic {
   arithSignature = ([t], []),
   arithFunc = \s -> [tail s],
