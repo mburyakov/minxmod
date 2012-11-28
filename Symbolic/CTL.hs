@@ -2,7 +2,7 @@ module Symbolic.CTL where
 
 import Data.Boolean
 
-import Types
+import Types hiding (initState)
 import Arithmetic
 import Predicates
 import Symbolic
@@ -22,15 +22,26 @@ calcCTL prog (CTLExistsFinally ctl) =
 
 onPosition :: Integral s => s -> Prog -> ProgStates
 onPosition n prog =
-  predToProgStates $ withFirst $ withAddressStack $ predIs $ valToBin (lineV 0)
+  predToProgStates $ withAddressStack $ withFirst $ predIs $ valToBin (lineV n)
     where
       (enumprog, lineV) = valueEnumerateProg prog
 
-stackLength :: Int ->  ProgStates
-stackLength n =
-  predToProgStates $ foldl (&&*) (PredArg [1,n,1]) valsStack
+stackLength :: Options -> Int ->  ProgStates
+stackLength opts n | lookup "bottom" opts /= Nothing =
+  predToProgStates $ foldl (&&*) (withStack $ withNth n $ withSecond $ predIsTrue) valsStack
     where
-      valsStack = map (notB . PredArg . (\x->[0,x,1])) [0..n-1]
+      valsStack = map (\x -> notB $ withStack $ withNth x $ withSecond $ predIsTrue) [0..n-1]
+
+inPosOfStack :: Options -> Int -> Value -> ProgStates
+inPosOfStack opts n v =
+  predToProgStates $ withIt $ predIs $ valToBin v
+    where
+      withIt =
+        if lookup "bottom" opts /= Nothing
+	then
+          (withStack . withNth n . withFirst)
+	else
+          (withStack . withNth n)
 
 initState opts prog =
   if
@@ -38,4 +49,8 @@ initState opts prog =
   then
     onPosition 0 prog
   else
-    onPosition 0 prog &&* stackLength 0
+    onPosition 0 prog &&* stackLength opts 0
+
+verify :: Options -> Prog -> CTL ProgStates -> Bool
+verify opts prog ctl =
+  Just False /= (toBool $ progStatesBDD $ calcCTL (progToBDD opts prog) ctl &&* initState opts prog)

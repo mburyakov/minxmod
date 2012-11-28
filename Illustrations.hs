@@ -1,7 +1,7 @@
 module Illustrations where
 
 import Permutations
-import Types
+import Types hiding (initState)
 import Examples
 import Predicates
 import BDD
@@ -18,6 +18,7 @@ import ArgOrd
 import Checker
 import Symbolic
 import Symbolic.Step
+import Symbolic.CTL
 import Main
 import Step
 import Arithmetic
@@ -233,12 +234,20 @@ ill25 = do
       options = [("bottom","")]
 
 ill26 =
-  step StepForward StepExists (progToBDD options simpleProgram6) (defaultProgState options simpleProgram6)
+  calcCTL (progToBDD options prog) ctl1
     where
+      ctl1 = CTLExistsFinally ctl2
+      ctl2 = CTLPred $ onPosition 1 prog &&* stackLength options 2
       options = [("bottom","")]
+      prog = simpleProgram6
 
 ill27 =
-  printProgBDD "simpleProgram6.dot" [("bottom","")] simpleProgram6
+  verify opts prog ctl1
+    where
+      ctl1 = CTLExistsFinally ctl2
+      ctl2 = CTLPred $ onPosition 1 prog &&* stackLength opts 1
+      opts = [("bottom","")]
+      prog = simpleProgram6
 
 illall = do 
   putStrLn $ show ill1

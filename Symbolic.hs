@@ -94,8 +94,8 @@ predArithBottomedStacks ar =
     &&* foldl (&&*) true valsBefore
       &&* foldl (&&*) true valsAfter
     where
-      valsBefore = map (notB . PredArg . (\x->[0,x,1])) [0..inl -1]
-      valsAfter  = map (notB . PredArg . (\x->[1,x,1])) [0..outl-1]
+      valsBefore = map (notB . PredArg . (\x->[0,x,1,0])) [0..inl -1]
+      valsAfter  = map (notB . PredArg . (\x->[1,x,1,0])) [0..outl-1]
       pred = PredBDD bdd
       bdd = processBDDv (Permutation PermInsertBottom) $ reducePred (permOrd permStacks (lineOrd (Arith ar))) (arithPredicate ar)
       inl = inputDepth ar

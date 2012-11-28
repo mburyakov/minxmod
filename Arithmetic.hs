@@ -18,27 +18,31 @@ withAfter  = withSecond
 permFirst  = doPerm $ ArgArg [0,0]
 permSecond = doPerm $ ArgArg [1,0]
 permParentFirst  = doPerm $ ArgList [ArgArg [0]]
---permParentSecond = PermPerm $ ArgList [error "undefined in permParentSecond", ArgArg [0]]
 permParentSecond = doPerm (ArgArg[-1]) `mappend` permParentFirst
+permNth n = doPerm $ ArgArg [n,0]
 
 withFirst  = PredPerm permFirst
 withSecond = PredPerm permSecond
 withParentFirst  = PredPerm permParentFirst
 withParentSecond = PredPerm permParentSecond
+withNth n = PredPerm $ permNth n
 
+permStack = permSecond
+withStack = withSecond
 
 permStacks = doPerm $ ArgList [ArgArg[0,1,0],ArgArg[1,1,0]]
 withStacks = PredPerm permStacks
 
-permAddressStack = doPerm $ ArgArg[0,0]
-withAddressStack = PredPerm permAddressStack
+permAddressStack = permFirst
+withAddressStack = withFirst
 
 permAddressStacks = doPerm $ ArgList [ArgArg[0,0,0],ArgArg[1,0,0]]
 withAddressStacks = PredPerm permAddressStacks
 
-
 permAddressStacksRest = doPerm $ ArgList [ArgArg[0,0,1],ArgArg[1,0,1]]
 withAddressStacksRest = PredPerm permAddressStacksRest
+
+predIsTrue = predIs [True]
 
 predIs [] =
   true       

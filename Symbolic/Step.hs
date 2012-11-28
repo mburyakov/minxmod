@@ -6,7 +6,7 @@ import BDD
 import ArgTree
 import Data.Boolean
 import DebugStub
---import Debug1
+import qualified Debug1
 import Arithmetic
 
 data ProgStates = ProgStates {progStatesBDD :: BDD}
@@ -16,14 +16,16 @@ instance Eq ProgStates where
     impl == Just True
       where    
         impl = toBool $ red $ reducePred stateOrd $ (notB (PredBDD $ progStatesBDD s2)) ||* (PredBDD $ progStatesBDD s1)
-        red bdd = let Just ans = getBDD (putBDD bdd emptyBox) in ans
 
 instance Boolean ProgStates where
-  true  = ProgStates $ reducePred stateOrd true
-  false = ProgStates $ reducePred stateOrd false
-  notB  = ProgStates . reducePred stateOrd . notB . PredBDD . progStatesBDD
-  a &&* b = ProgStates . reducePred stateOrd $ (PredBDD $ progStatesBDD a) &&* (PredBDD $ progStatesBDD b)
-  a ||* b = ProgStates . reducePred stateOrd $ (PredBDD $ progStatesBDD a) ||* (PredBDD $ progStatesBDD b)
+  true  = ProgStates $ red $ reducePred stateOrd true
+  false = ProgStates $ red $ reducePred stateOrd false
+  notB  = ProgStates . red . reducePred stateOrd . notB . PredBDD . progStatesBDD
+  a &&* b = ProgStates . red . reducePred stateOrd $ (PredBDD $ progStatesBDD a) &&* (PredBDD $ progStatesBDD b)
+  a ||* b = ProgStates . red . reducePred stateOrd $ (PredBDD $ progStatesBDD a) ||* (PredBDD $ progStatesBDD b)
+    where
+
+red bdd = let Just ans = getBDD (putBDD bdd emptyBox) in ans
 
 predToProgStates =
   ProgStates . reducePred stateOrd
@@ -39,7 +41,7 @@ step dir quantif gr st =
     where
       permSt = fromperm $ PredBDD $ progStatesBDD st
       and = permSt &&* PredBDD gr
-      ex = quantpred [0,0] $ PredBDD $ processForces (const Nothing) $ reducePred globalOrd $ and
+      ex = quantpred quantside $ PredBDD $ processForces (const Nothing) $ reducePred globalOrd $ and
       permEx = toperm $ PredBDD $ reducePred globalOrd ex
       or = permEx ||* PredBDD (progStatesBDD st)
       fromperm = case dir of
@@ -51,6 +53,9 @@ step dir quantif gr st =
       quantpred = case quantif of
         StepExists -> predExists
 	StepAll    -> predForAll
+      quantside = case dir of
+        StepForward  -> [0,0]
+	StepBackward -> [1,0]
 
 stepList :: StepDirection -> StepQuantifier -> Kripke -> ProgStates -> [ProgStates] 
 stepList dir quantif gr st =
