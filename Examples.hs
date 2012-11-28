@@ -99,7 +99,7 @@ simpleProgram4 =
 
 simpleProgram5 =
   compile [
-    Label "begin" $ Arith $ arPush $ byteV 0,
+    Label "begin" $ Arith $ arPush $ SmallBoundedValue 0 3 0,
     Jmp "begin"
   ]
 
