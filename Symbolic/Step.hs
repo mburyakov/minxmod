@@ -20,9 +20,11 @@ instance Eq ProgStates where
 
 type Kripke = BDD
 
+data StepDirection = StepForward | StepBackward
+data StepQuantifier = StepAll | StepExists
 
-step :: Kripke -> ProgStates -> ProgStates
-step gr st =
+step :: StepDirection -> StepQuantifier -> Kripke -> ProgStates -> ProgStates
+step StepForward StepExists gr st =
   ProgStates $ reducePred stateOrd or
     where
       permSt = withFirst $ PredBDD $ progStatesBDD st
@@ -35,7 +37,7 @@ stepList :: Kripke -> ProgStates -> [ProgStates]
 stepList gr st =
   st:rest
     where
-      newSt = step gr st
+      newSt = step StepForward StepExists gr st
       rest' = stepList gr newSt
       rest = if st==newSt then [] else rest'
       

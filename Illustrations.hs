@@ -183,7 +183,7 @@ ill17 = do
     where
       sp3 = progToBDD [] simpleProgram3
       x0 = defaultState [] byteV
-      x1 = step sp3 x0
+      x1 = step StepForward StepExists sp3 x0
       px1 = reducePred globalOrd $ (withFirst $ PredBDD $ progStatesBDD x1)
       r = reducePred globalOrd $ (withFirst $ PredBDD $ progStatesBDD x1) &&* (PredBDD x)
       x = processForces (const $ Just Step) $ reducePred (lineOrd $ Arith $ arPush $ toBoolValue False) $ (bddLine mempty byteV [] (EnumInsn 1 (Arith $ arPush $ toBoolValue False)))
