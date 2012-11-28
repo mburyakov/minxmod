@@ -10,6 +10,7 @@ import DebugStub
 import Arithmetic
 
 data ProgStates = ProgStates {progStatesBDD :: BDD}
+  deriving Show
 instance Eq ProgStates where
   s1 == s2 =
     impl == Just True
@@ -17,6 +18,15 @@ instance Eq ProgStates where
         impl = toBool $ red $ reducePred stateOrd $ (notB (PredBDD $ progStatesBDD s2)) ||* (PredBDD $ progStatesBDD s1)
         red bdd = let Just ans = getBDD (putBDD bdd emptyBox) in ans
 
+instance Boolean ProgStates where
+  true  = ProgStates $ reducePred stateOrd true
+  false = ProgStates $ reducePred stateOrd false
+  notB  = ProgStates . reducePred stateOrd . notB . PredBDD . progStatesBDD
+  a &&* b = ProgStates . reducePred stateOrd $ (PredBDD $ progStatesBDD a) &&* (PredBDD $ progStatesBDD b)
+  a ||* b = ProgStates . reducePred stateOrd $ (PredBDD $ progStatesBDD a) ||* (PredBDD $ progStatesBDD b)
+
+predToProgStates =
+  ProgStates . reducePred stateOrd
 
 type Kripke = BDD
 
@@ -24,29 +34,29 @@ data StepDirection = StepForward | StepBackward
 data StepQuantifier = StepAll | StepExists
 
 step :: StepDirection -> StepQuantifier -> Kripke -> ProgStates -> ProgStates
-step StepForward StepExists gr st =
+step dir quantif gr st =
   ProgStates $ reducePred stateOrd or
     where
-      permSt = withFirst $ PredBDD $ progStatesBDD st
+      permSt = fromperm $ PredBDD $ progStatesBDD st
       and = permSt &&* PredBDD gr
-      ex = predExists [0,0] $ PredBDD $ processForces (const Nothing) $ reducePred globalOrd $ and
-      permEx = withParentSecond $ PredBDD $ reducePred globalOrd ex
+      ex = quantpred [0,0] $ PredBDD $ processForces (const Nothing) $ reducePred globalOrd $ and
+      permEx = toperm $ PredBDD $ reducePred globalOrd ex
       or = permEx ||* PredBDD (progStatesBDD st)
+      fromperm = case dir of
+        StepForward  -> withFirst
+	StepBackward -> withSecond
+      toperm = case dir of
+        StepForward  -> withParentSecond
+	StepBackward -> withParentFirst
+      quantpred = case quantif of
+        StepExists -> predExists
+	StepAll    -> predForAll
 
-stepList :: Kripke -> ProgStates -> [ProgStates] 
-stepList gr st =
+stepList :: StepDirection -> StepQuantifier -> Kripke -> ProgStates -> [ProgStates] 
+stepList dir quantif gr st =
   st:rest
     where
-      newSt = step StepForward StepExists gr st
-      rest' = stepList gr newSt
+      newSt = step dir quantif gr st
+      rest' = stepList dir quantif gr newSt
       rest = if st==newSt then [] else rest'
-      
-fixedPoint n gr st =
-  if
-    drop n lst == []
-  then
-    (last $ lst, n - length lst + 1)
-  else  
-    (lst !! n, 0)
-    where
-      lst = stepList gr st
+

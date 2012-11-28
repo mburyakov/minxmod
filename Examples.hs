@@ -2,8 +2,9 @@
 
 module Examples where
 
+import Symbolic.CTL
 import Permutations
-import Types
+import Types hiding (initState)
 import Predicates
 import ArgTree
 import ArgOrd
@@ -66,10 +67,12 @@ defaultState opts lineV =
       pred1 = withPerm (ArgArg[0,0,0]) (predIs $ valToBin (lineV 0))
       pred2 = PredArg [1,0,1]
 
-defaultProgState opts prog =
+defaultProgState' opts prog =
   defaultState opts lineV
     where
       (enumprog, lineV) = valueEnumerateProg prog
+
+defaultProgState = initState
 
 simpleProgram2 =
   compile [
@@ -101,6 +104,11 @@ simpleProgram5 =
   compile [
     Label "begin" $ Arith $ arPush $ SmallBoundedValue 0 3 0,
     Jmp "begin"
+  ]
+
+simpleProgram6 =
+  compile [
+    Arith $ arRand $ boolT
   ]
 
 xorList _ [] = []
@@ -144,7 +152,18 @@ countNodes options prog =
   countBDDNodes $ progToBDD options prog
 
 countStatesNodes options prog =
-  map (countBDDNodes.progStatesBDD) (stepList kripke start)
+  map (countBDDNodes.progStatesBDD) (stepList StepForward StepExists kripke start)
     where
       kripke = progToBDD options prog
       start = defaultProgState options prog
+
+
+fixedPoint n gr st =
+  if
+    drop n lst == []
+  then
+    (last $ lst, n - length lst + 1)
+  else  
+    (lst !! n, 0)
+    where
+      lst = stepList StepForward StepExists gr st

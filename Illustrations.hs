@@ -232,6 +232,14 @@ ill25 = do
     where
       options = [("bottom","")]
 
+ill26 =
+  step StepForward StepExists (progToBDD options simpleProgram6) (defaultProgState options simpleProgram6)
+    where
+      options = [("bottom","")]
+
+ill27 =
+  printProgBDD "simpleProgram6.dot" [("bottom","")] simpleProgram6
+
 illall = do 
   putStrLn $ show ill1
   putStrLn $ show ill3
