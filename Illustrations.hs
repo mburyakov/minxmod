@@ -267,6 +267,27 @@ ill28 =
       opts = [("bottom","")]
       prog = simpleProgram7
 
+ill29 = do
+  --map (verify opts prog) [ctl_p, ctl_AXp, ctl_AXAXp, ctl_AXAXAXp, ctl_AXAXAXAXp, ctl_AXAXAXAXAXp, ctl_AXAXAXAXAXAXp, ctl_AXAXAXAXAXAXAXp, ctl_AFp]
+  printBDD "simpleProgram8states/simpleProgram8_p.dot" $ progStatesBDD $ calcCTL (progToBDD opts prog) $ ctl_p
+  printBDD "simpleProgram8states/simpleProgram8_AXp.dot" $ progStatesBDD $ calcCTL (progToBDD opts prog) $ ctl_AXp
+  printBDD "simpleProgram8states/simpleProgram8_AXAXp.dot" $ progStatesBDD $ calcCTL (progToBDD opts prog) $ ctl_AXAXp
+  printBDD "simpleProgram8states/simpleProgram8_AXAXAXp.dot" $ progStatesBDD $ calcCTL (progToBDD opts prog) $ ctl_AXAXAXp
+  printBDD "simpleProgram8states/simpleProgram8_AXAXAXAXp.dot" $ progStatesBDD $ calcCTL (progToBDD opts prog) $ ctl_AXAXAXAXp
+  printBDD "simpleProgram8states/simpleProgram8_AFp.dot" $ progStatesBDD $ calcCTL (progToBDD opts prog) $ ctl_AFp
+    where
+      ctl_AFp = CTLAllFinally ctl_p
+      ctl_AXp = CTLAllNext ctl_p
+      ctl_AXAXp = CTLAllNext ctl_AXp
+      ctl_AXAXAXp = CTLAllNext ctl_AXAXp
+      ctl_AXAXAXAXp = CTLAllNext ctl_AXAXAXp
+      ctl_AXAXAXAXAXp = CTLAllNext ctl_AXAXAXAXp
+      ctl_AXAXAXAXAXAXp = CTLAllNext ctl_AXAXAXAXAXp
+      ctl_AXAXAXAXAXAXAXp = CTLAllNext ctl_AXAXAXAXAXAXp
+      ctl_p = CTLPred $ onLabel "end" prog &&* inPosOfStack opts 0 (boolV 1)
+      opts = [("bottom","")]
+      prog = simpleProgram8
+      
 illall = do 
   putStrLn $ show ill1
   putStrLn $ show ill3

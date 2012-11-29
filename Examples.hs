@@ -121,10 +121,20 @@ simpleProgram7 =
   
 simpleProgram8 =
   compile [
-    Arith $ arRand boolT,
-    Arith $ arDup boolT,
-    Arith $ arNot,
-    Arith $ arOr
+    Jmp "begin",
+    
+    Label "function" $      
+      Arith $ arDup boolT,
+      Arith $ arNot,
+      Arith $ arOr,
+      Arith $ arOr,
+    JmpRet,
+    
+    Label "begin" $
+      Arith $ arRand boolT,
+      Arith $ arRand boolT,
+      JmpCall "function",
+    Label "end" $ Arith arNop
   ]
 
 xorList _ [] = []
