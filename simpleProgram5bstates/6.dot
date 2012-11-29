@@ -10,7 +10,7 @@ digraph {
     9 [label="[1,1,1]"];
     10 [label="[1,1,0,1]"];
     11 [label="[1,1,0,0]"];
-    12 [label="[1,0,1]"];
+    12 [label="[1,0,1,0]"];
     13 [label="[1,0,0,1]"];
     14 [label="[1,0,0,0]"];
     15 [label="[0,0,1]"];
@@ -62,7 +62,7 @@ digraph {
     16 -> 1 [style=dashed
             ,color=blue];
     16 -> 2 [color=red];
-    17 -> 11 [style=dashed
+    17 -> 12 [style=dashed
              ,color=blue];
     17 -> 2 [color=red];
     18 -> 16 [color=red];
