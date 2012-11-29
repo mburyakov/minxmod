@@ -151,6 +151,16 @@ arReplace val = Arithmetic {
   arithPredicate = withPerm (ArgArg[1,0,0]) $ predIs $ valToBin $ val
 }
 
+arDup t = Arithmetic {
+  arithSignature = ([t], [t,t]),
+  arithFunc = \s -> [head s:s],
+  arithPredicate =
+    (withPerm (ArgList[ArgArg[0,0,0],ArgArg[1,0,0]]) $ predEq size size)
+      &&* (withPerm (ArgList[ArgArg[1,0,0],ArgArg[1,1,0]]) $ predEq size size)
+}
+  where
+    size = binSize t
+
 boolV = SmallBoundedValue 0 1
 boolT = SmallBoundedType 0 1
 fromBoolValue x =

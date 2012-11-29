@@ -111,6 +111,22 @@ simpleProgram6 =
     Arith $ arRand $ boolT
   ]
 
+simpleProgram7 =
+  compile [
+    Arith $ arRand boolT,
+    Arith $ arDup boolT,
+    Arith $ arNop,
+    Arith $ arOr
+  ]
+  
+simpleProgram8 =
+  compile [
+    Arith $ arRand boolT,
+    Arith $ arDup boolT,
+    Arith $ arNot,
+    Arith $ arOr
+  ]
+
 xorList _ [] = []
 xorList True  (x:xs) = (not x) : xorList x xs
 xorList False (x:xs) = x : xorList x xs

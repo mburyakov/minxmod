@@ -18,6 +18,7 @@ import ArgOrd
 import Checker
 import Symbolic
 import Symbolic.Step
+import CTL hiding (verify)
 import Symbolic.CTL
 import Main
 import Step
@@ -242,12 +243,29 @@ ill26 =
       prog = simpleProgram6
 
 ill27 =
-  verify opts prog ctl1
+  (verify opts prog ctl1, verify opts prog ctl1')
     where
       ctl1 = CTLExistsFinally ctl2
+      ctl1' = CTLExistsFinally ctl2'
       ctl2 = CTLPred $ onPosition 1 prog &&* stackLength opts 1
+      ctl2' = CTLPred $ onPosition 1 prog &&* stackLength opts 2
       opts = [("bottom","")]
       prog = simpleProgram6
+
+ill28 =
+  --stepList StepBackward StepAll (progToBDD opts prog) $ false
+  calcCTL (progToBDD opts prog) ctl1
+    where
+      ctl1 = CTLAllFinally ctl2
+      ctl2 = CTLPred $ onPosition 4 prog &&* stackLength opts 1 &&* inPosOfStack opts 0 (boolV 1)
+      
+      ctlAcceptable = notB $ CTLExistsFinally ctlDeadLock
+      ctlNoGo = CTLAllNext CTLFalse
+      ctlFinal = CTLPred $ finalState prog
+      ctlDeadLock = ctlNoGo &&* notB ctlFinal
+      ctlAcc = CTLExistsFinally ctlDeadLock
+      opts = [("bottom","")]
+      prog = simpleProgram7
 
 illall = do 
   putStrLn $ show ill1
