@@ -30,6 +30,9 @@ import Control.Monad
 import Data.List
 import DebugStub hiding (assert)
 import Debug1 (assert)
+import StateGraph
+import ToDot
+import qualified Types
 
 ill1 =
   reducePred' ao $ (PredBDD $ BDDeq [0,1] [1,0] BDDTrue BDDFalse)||*(PredBDD $ BDDv [0,0] BDDTrue BDDFalse)
@@ -287,7 +290,33 @@ ill29 = do
       ctl_p = CTLPred $ onLabel "end" prog &&* inPosOfStack opts 0 (boolV 1)
       opts = [("bottom","")]
       prog = simpleProgram8
-      
+
+ill30 = do
+  putStrLn $ show $ map (verify opts prog) [ctl_p, ctl_AXp, ctl_AXAXp, ctl_AXAXAXp, ctl_AXAXAXAXp, ctl_AXAXAXAXAXp, ctl_AXAXAXAXAXAXp, ctl_AXAXAXAXAXAXAXp, ctl_AFp]
+  printBDD "simpleProgram7states/simpleProgram7_p.dot" $ progStatesBDD $ calcCTL (progToBDD opts prog) $ ctl_p
+  printBDD "simpleProgram7states/simpleProgram7_AXp.dot" $ progStatesBDD $ calcCTL (progToBDD opts prog) $ ctl_AXp
+  printBDD "simpleProgram7states/simpleProgram7_AXAXp.dot" $ progStatesBDD $ calcCTL (progToBDD opts prog) $ ctl_AXAXp
+  printBDD "simpleProgram7states/simpleProgram7_AXAXAXp.dot" $ progStatesBDD $ calcCTL (progToBDD opts prog) $ ctl_AXAXAXp
+  printBDD "simpleProgram7states/simpleProgram7_AXAXAXAXp.dot" $ progStatesBDD $ calcCTL (progToBDD opts prog) $ ctl_AXAXAXAXp
+  printBDD "simpleProgram7states/simpleProgram7_AFp.dot" $ progStatesBDD $ calcCTL (progToBDD opts prog) $ ctl_AFp
+    where
+      ctl_AFp = CTLAllFinally ctl_p
+      ctl_AXp = CTLAllNext ctl_p
+      ctl_AXAXp = CTLAllNext ctl_AXp
+      ctl_AXAXAXp = CTLAllNext ctl_AXAXp
+      ctl_AXAXAXAXp = CTLAllNext ctl_AXAXAXp
+      ctl_AXAXAXAXAXp = CTLAllNext ctl_AXAXAXAXp
+      ctl_AXAXAXAXAXAXp = CTLAllNext ctl_AXAXAXAXAXp
+      ctl_AXAXAXAXAXAXAXp = CTLAllNext ctl_AXAXAXAXAXAXp
+      ctl_p = CTLPred $ onLabel "end" prog &&* inPosOfStack opts 0 (boolV 1)
+      opts = [("bottom","")]
+      prog = simpleProgram7
+
+ill31 =
+  writeFile "simpleProgram7states/simpleProgram7StateGraph.dot" $ ToDot.toDot $ StateGraph.stateGraph init 20
+    where
+      init = Types.initState $ Types.Model [] [] simpleProgram7
+
 illall = do 
   putStrLn $ show ill1
   putStrLn $ show ill3
@@ -313,6 +342,9 @@ illall = do
   ill23
   ill24
   ill25
+  ill29
+  ill30
+  ill31
 
 data B = T | F
 instance Binarizable B where

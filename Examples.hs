@@ -115,8 +115,9 @@ simpleProgram7 =
   compile [
     Arith $ arRand boolT,
     Arith $ arDup boolT,
-    Arith $ arNop,
-    Arith $ arOr
+    Arith $ arNot,
+    Arith $ arOr,
+    Label "end" $ Arith arNop
   ]
   
 simpleProgram8 =
