@@ -216,7 +216,20 @@ data OrdGlobal = OrdGlobal
   deriving (Eq, Show, Typeable)
 instance ArgOrdClass OrdGlobal where
   argCompare OrdGlobal x y =
-    Just $ compare (permute x) (permute y)
+    case ((x !! 0, x !! 1, x !! 2), (y !! 0, y !! 1, y !! 2)) of
+      ((0,0,0), (0,0,0)) ->
+        argCompare (ArgOrd OrdState) x y
+      ((1,0,0), (1,0,0)) ->
+        argCompare (ArgOrd OrdState) (tail x) (tail y)
+      ((_,0,0), (_,0,0)) ->
+        Just $ compare x y
+      ((_,0,0), _) ->
+        Just LT
+      (_, (_,0,0)) ->
+        Just GT
+      _ ->
+        --error $ show x ++ show y
+        Just $ compare (permute x) (permute y)
       where
         permute i = (i !! 1, i !! 2, drop 3 i, i !! 0)
 
